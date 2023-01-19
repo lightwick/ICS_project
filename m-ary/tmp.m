@@ -43,13 +43,11 @@ M = 16
             ReceivedSymbolSequence = H .* SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx_EbN0)); % Received Signal (y = s + n) Generation
     
             % ZF Receiver
-            DetectionSymbolSequence_ZF = ReceivedSymbolSequence ./ H; % Detection (Zero-Forcing: y / h)
+            w_zf = H.^(-1);
+            DetectionSymbolSequence_ZF = ReceivedSymbolSequence .* w_zf; % Detection (Zero-Forcing: y / h)
     
             % MMSE Receiver
-            rho = EsN0(indx_EbN0);
-            %w_mmse = conj(H) ./ (H.*conj(H)+1/rho);
-            w_mmse = rho*(H'*H)^(-1)*H';
-            pause
+            w_mmse = (H.*conj(H)+1/EsN0(indx_EbN0)).^(-1) .* conj(H);
             DetectionSymbolSequence_MMSE = ReceivedSymbolSequence .* w_mmse;
     
             % MLD Receiver; ZF MLD 차이점????
@@ -80,7 +78,7 @@ M = 16
     figure()
     semilogy(EbN0_dB, BER_Theory, 'r--'); % bin
     hold on
-    semilogy(EbN0_dB, BER_Simulation_ZF, 'bo'); % gray
+    semilogy(EbN0_dB, BER_Simulation_ZF, 'bo');
     semilogy(EbN0_dB, BER_Simulation_MMSE, 'bx');
     semilogy(EbN0_dB, BER_Simulation_MLD, 'b^');
     
