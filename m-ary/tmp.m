@@ -1,18 +1,21 @@
 close all
 clear
 clc
+
+% 수정사항: SNR이 클 때의 ZF, MMSE 비교
+
 % Simulation
 M = 16
-NumberOfSignals = 10^2;
-LengthBitSequence = NumberOfSignals*log2(M); % log2(M) bits per signal
+NumberOfSignals = 1;
+LengthBitSequence = Nt * NumberOfSignals*log2(M); % log2(M) bits per signal
 
-NumberIteration = 10^3;
+NumberIteration = 10^4;
 
 Es = 1;
 Normalization_Factor = sqrt(2/3*(M-1));
 
-EbN0_dB = -2 : 2 : 20;
-EbN0 = 10 .^ (EbN0_dB / 10);
+EbN0_dB = -10 : 5 : 30;
+EbN0 = 10 .^ (EbN0_dB / 10); % db2pow
 
 % Calulate EsN0_dB
 % method 1; not sure how much of an error this makes or its effect
@@ -33,7 +36,15 @@ for ii = 1:length(alphabet_letter)
     end
 end
 
+% for i = 0 : 15
+%     binary: 0000 ~ 1111
+%     alpha =qammode (bi2de(binary))
+% end
+
+
 for iTotal = 1 : NumberIteration
+%     tic
+    
     BitSequence = randi([0 1], 1, LengthBitSequence); % Bit Generation (BitSequence = rand(1, LengthBitSequence) > 0.5;)
     SymbolSequence = qammod(BitSequence.', M, 'InputType', 'bit', 'UnitAveragePower', 1).';
     %avgPower = mean(abs(SymbolSequence).^2)
@@ -41,6 +52,8 @@ for iTotal = 1 : NumberIteration
     H = (randn(1, length(SymbolSequence)) + 1j * randn(1, length(SymbolSequence))) ./ sqrt(2); % Channel (h) Generation
     for indx_EbN0 = 1 : length(EbN0)
         ReceivedSymbolSequence = H .* SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx_EbN0)); % Received Signal (y = s + n) Generation
+        
+%         ReceivedSymbolSequence = H .* SymbolSequence;
 
         % ZF Receiver
         w_zf = H.^(-1);
@@ -53,10 +66,13 @@ for iTotal = 1 : NumberIteration
         arg = arg .* conj(arg);
         [val,idx] = min(arg);
         DetectionSymbolSequence_MMSE = alphabet(idx); % TODO: could possibly simplify it more
+        DetectionSymbolSequence_MMSE = z;
+        
+        % z로 qamdemod 사용
 
         % MLD Receiver; ZF MLD 차이점????
         arg = (ones(length(alphabet),1) * ReceivedSymbolSequence) - (alphabet.' * H);
-        arg = arg .* conj(arg);
+        arg = arg .* conj(arg); % -> abs(arg).^2
         [val,idx] = min(arg);
         DetectionSymbolSequence_MLD = alphabet(idx); % TODO: could possibly simplify it more
 
@@ -70,6 +86,8 @@ for iTotal = 1 : NumberIteration
         ErrorCount_MMSE(1, indx_EbN0) = ErrorCount_MMSE(1, indx_EbN0) + sum(DetectionBitSequence_MMSE~=BitSequence);
         ErrorCount_MLD(1, indx_EbN0) = ErrorCount_MLD(1, indx_EbN0) + sum(DetectionBitSequence_MLD~=BitSequence);
     end
+%     toc
+    
 end
 
 BER_Simulation_ZF = ErrorCount_ZF / (LengthBitSequence * NumberIteration);
