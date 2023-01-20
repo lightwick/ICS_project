@@ -6,41 +6,34 @@ clc
 
 % Simulation
 M = 16
+Nt = 1;
 NumberOfSignals = 1;
 LengthBitSequence = Nt * NumberOfSignals*log2(M); % log2(M) bits per signal
 
 NumberIteration = 10^4;
 
 Es = 1;
-Normalization_Factor = sqrt(2/3*(M-1));
+Normalization_Factor = sqrt(2/3*(M-1)); % 보고서에 해당 내용 정리
 
-EbN0_dB = -10 : 5 : 30;
-EbN0 = 10 .^ (EbN0_dB / 10); % db2pow
+%EbN0_dB = -10 : 5 : 30;
+EbN0_dB = -2 : 2: 20;
+% EbN0 = 10 .^ (EbN0_dB / 10);
+EbN0 = db2pow(EbN0_dB);
 
 % Calulate EsN0_dB
 % method 1; not sure how much of an error this makes or its effect
 EsN0 = EbN0 * log2(M);
-EsN0_dB = 10*log10(EsN0);
+EsN0_dB1 = 10*log10(EsN0);
 % method 2
-EsN0_dB = EbN0_dB + 10*log10(log2(M)); % derived from EsN0 = EbN0 * log2(M);
+EsN0_dB2 = EbN0_dB + 10*log10(log2(M)); % derived from EsN0 = EbN0 * log2(M);
+% method 3
+EsN0_dB3 = pow2db(EsN0);
 
 ErrorCount_ZF = zeros(1, length(EbN0_dB));
 ErrorCount_MMSE = zeros(1, length(EbN0_dB));
 ErrorCount_MLD = zeros(1, length(EbN0_dB));
 
-alphabet_letter = [-(sqrt(M)-1):2:sqrt(M)-1] / Normalization_Factor;
-alphabet = [];
-for ii = 1:length(alphabet_letter)
-    for jj = 1:length(alphabet_letter)
-        alphabet = [alphabet, alphabet_letter(ii) + j*alphabet_letter(jj)];
-    end
-end
-
-% for i = 0 : 15
-%     binary: 0000 ~ 1111
-%     alpha =qammode (bi2de(binary))
-% end
-
+alphabet = qammod([0:M-1], M, 'UnitAveragePower', true);
 
 for iTotal = 1 : NumberIteration
 %     tic
@@ -52,8 +45,6 @@ for iTotal = 1 : NumberIteration
     H = (randn(1, length(SymbolSequence)) + 1j * randn(1, length(SymbolSequence))) ./ sqrt(2); % Channel (h) Generation
     for indx_EbN0 = 1 : length(EbN0)
         ReceivedSymbolSequence = H .* SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx_EbN0)); % Received Signal (y = s + n) Generation
-        
-%         ReceivedSymbolSequence = H .* SymbolSequence;
 
         % ZF Receiver
         w_zf = H.^(-1);
@@ -72,7 +63,8 @@ for iTotal = 1 : NumberIteration
 
         % MLD Receiver; ZF MLD 차이점????
         arg = (ones(length(alphabet),1) * ReceivedSymbolSequence) - (alphabet.' * H);
-        arg = arg .* conj(arg); % -> abs(arg).^2
+        arg = abs(arg).^2;
+        %arg = arg .* conj(arg); % -> abs(arg).^2
         [val,idx] = min(arg);
         DetectionSymbolSequence_MLD = alphabet(idx); % TODO: could possibly simplify it more
 
@@ -98,7 +90,7 @@ BER_Theory = berfading(EbN0_dB, 'qam', M, 1); % not sure if 'dataenc' needs to b
 
 % Plot
 figure()
-semilogy(EbN0_dB, BER_Theory, 'r--'); % bin
+semilogy(EbN0_dB, BER_Theory, 'r--');
 hold on
 semilogy(EbN0_dB, BER_Simulation_ZF, 'bo');
 semilogy(EbN0_dB, BER_Simulation_MMSE, 'bx');
