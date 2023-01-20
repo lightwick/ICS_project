@@ -1,0 +1,26 @@
+While working on assignment
+
+TODO:
+1. symOrder - 'gray'(default) and 'bin'; Gray Coding and natural binary-coded ordering, BER 측정 시험에 오류율 영향 미치나?? - 실험해볼것
+
+2. 이론 Error Rate 정확도?? Union Bound, Berawgn, Gauss approx 왜 차이??
+Berawgn과 simulation 일치.
+
+QUESTIONS:
+1. qammod vs self implemented method speed?
+qammod 속도 느린 거 같은 느낌이??
+2. Channel state information을 알기란 가능한 건가????
+Wikipedia: When the channel state information is perfectly known at the transmitter, the zero-forcing precoder is given by the pseudo-inverse of the channel matrix.ation is perfectly known
+3. Error 중요도??
+% Calulate EsN0_dB
+% method 1; not sure how much of an error this makes or its effect
+EsN0 = EbN0 * log2(M);
+EsN0_dB = 10*log10(EsN0);
+% method 2
+EsN0_dB = EbN0_dB + 10*log10(log2(M)) % derived from EsN0 = EbN0 * log2(M);
+
+
+4. ZF, MLD 똑같은 거 아닌가???
+내가 implement를 잘못하고 있는 건가?? ← 가능성 高
+
+5. 왜 noise를 빼면 탐지가 안됨???
