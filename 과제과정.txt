@@ -51,7 +51,31 @@ method 2-3
 
          0
 
-5. MIMO 환경에서
+5. SNR이 클 때의 값 차이 분석
+BitSequence 10^5
+EbN0_dB 30:5:50
+
+ErrorCount_ZF =
+
+   185    60    19     2     1
+
+>> ErrorCount_MMSE
+
+ErrorCount_MMSE =
+
+   198    63    19     4     0
+   
+   
+ErrorCount_ZF =
+
+   145    52    16     3     2
+
+>> ErrorCount_MMSE
+
+ErrorCount_MMSE =
+
+   159    46    15     4     3
+   
 QUESTIONS:
 1. qammod vs self implemented method speed?
 qammod 속도 느린 거 같은 느낌이??
