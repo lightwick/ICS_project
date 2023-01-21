@@ -7,27 +7,19 @@ clc
 % Simulation
 M = 16
 Nt = 1;
-NumberOfSignals = 1;
+NumberOfSignals = 10^2;
 LengthBitSequence = Nt * NumberOfSignals*log2(M); % log2(M) bits per signal
 
-NumberIteration = 10^4;
+NumberIteration = 10^3;
 
 Es = 1;
-Normalization_Factor = sqrt(2/3*(M-1)); % 보고서에 해당 내용 정리
+% Normalization_Factor = sqrt(2/3*(M-1)); % 보고서에 해당 내용 정리
 
-%EbN0_dB = -10 : 5 : 30;
-EbN0_dB = -2 : 2: 20;
-% EbN0 = 10 .^ (EbN0_dB / 10);
-EbN0 = db2pow(EbN0_dB);
+EsN0_dB = -2:2:20;
+EsN0 = db2pow(EsN0_dB);
 
-% Calulate EsN0_dB
-% method 1; not sure how much of an error this makes or its effect
-EsN0 = EbN0 * log2(M);
-EsN0_dB1 = 10*log10(EsN0);
-% method 2
-EsN0_dB2 = EbN0_dB + 10*log10(log2(M)); % derived from EsN0 = EbN0 * log2(M);
-% method 3
-EsN0_dB3 = pow2db(EsN0);
+EbN0 = EsN0 / log2(M);
+EbN0_dB = pow2db(EbN0);
 
 ErrorCount_ZF = zeros(1, length(EbN0_dB));
 ErrorCount_MMSE = zeros(1, length(EbN0_dB));
@@ -70,7 +62,6 @@ for iTotal = 1 : NumberIteration
 
         % Symbol Sequence -> Bit Sequence
         DetectionBitSequence_ZF = qamdemod(DetectionSymbolSequence_ZF.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)'; % Detection
-        % TODO: implementation of DetectionBitSequence_MMSE
         DetectionBitSequence_MMSE = qamdemod(DetectionSymbolSequence_MMSE.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)'; % tmp value;
         DetectionBitSequence_MLD = qamdemod(DetectionSymbolSequence_MLD.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)';
 
@@ -86,20 +77,24 @@ BER_Simulation_ZF = ErrorCount_ZF / (LengthBitSequence * NumberIteration);
 BER_Simulation_MMSE = ErrorCount_MMSE / (LengthBitSequence * NumberIteration);
 BER_Simulation_MLD = ErrorCount_MLD / (LengthBitSequence * NumberIteration);
 
-BER_Theory = berfading(EbN0_dB, 'qam', M, 1); % not sure if 'dataenc' needs to be specified; I don't even know what it does
+if M==2
+    BER_Theory = berfading(EbN0_dB, 'psk', 2, 1);
+else
+    BER_Theory = berfading(EbN0_dB, 'qam', M, 1); % not sure if 'dataenc' needs to be specified; I don't even know what it does
+end
 
 % Plot
 figure()
-semilogy(EbN0_dB, BER_Theory, 'r--');
+semilogy(EsN0_dB, BER_Theory, 'r--');
 hold on
-semilogy(EbN0_dB, BER_Simulation_ZF, 'bo');
-semilogy(EbN0_dB, BER_Simulation_MMSE, 'bx');
-semilogy(EbN0_dB, BER_Simulation_MLD, 'b^');
+semilogy(EsN0_dB, BER_Simulation_ZF, 'bo');
+semilogy(EsN0_dB, BER_Simulation_MMSE, 'bx');
+semilogy(EsN0_dB, BER_Simulation_MLD, 'b^');
 
 
-axis([-2 20 10^-5 0.5])
+axis([-2 20 10^-3 0.5])
 grid on
 legend('Theory (Rayleigh)', 'ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
-xlabel('Eb/No [dB]');
+xlabel('Es/No [dB]');
 ylabel('BER');
 title('BER for QAM (M='+string(M)+')');
