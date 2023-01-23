@@ -5,17 +5,17 @@ clc
 % 수정사항: SNR이 클 때의 ZF, MMSE 비교
 
 % Simulation
-M = 4
+M = 16
 Nt = 1;
-NumberOfSignals = 10^4;
+NumberOfSignals = 10^2;
 LengthBitSequence = Nt * NumberOfSignals*log2(M); % log2(M) bits per signal
 
-NumberIteration = 1;
+NumberIteration = 10^3;
 
 Es = 1;
 % Normalization_Factor = sqrt(2/3*(M-1)); % 보고서에 해당 내용 정리
 
-EsN0_dB = 5;
+EsN0_dB = -2:2:20;
 EsN0 = db2pow(EsN0_dB);
 
 EbN0 = EsN0 / log2(M);
@@ -25,10 +25,7 @@ ErrorCount_ZF = zeros(1, length(EbN0_dB));
 ErrorCount_MMSE = zeros(1, length(EbN0_dB));
 ErrorCount_MLD = zeros(1, length(EbN0_dB));
 
-alphabet = qammod([0:M-1], M, 'PlotConstellation', true, 'UnitAveragePower', true);
-
-record = zeros(1,length(EbN0_dB));
-hi = zeros(1,4)
+alphabet = qammod([0:M-1], M, 'UnitAveragePower', true);
 
 for iTotal = 1 : NumberIteration
 %     tic
@@ -49,11 +46,8 @@ for iTotal = 1 : NumberIteration
         w_mmse = (H.*conj(H)+1/EsN0(indx_EbN0)).^(-1) .* conj(H);
         z = ReceivedSymbolSequence .* w_mmse;
         arg = (ones(length(alphabet),1) * z) - (alphabet.' * H .* w_mmse);
-        arg_1 = arg .* conj(arg);
-        [val,idx] = min(arg_1);
-%         for ii=1:length(idx)
-%             record(1,ii) = arg(idx(ii),ii);
-%         end
+        arg = arg .* conj(arg);
+        [val,idx] = min(arg);
         DetectionSymbolSequence_MMSE = alphabet(idx); % TODO: could possibly simplify it more
         DetectionSymbolSequence_MMSE = z;
         
@@ -70,31 +64,10 @@ for iTotal = 1 : NumberIteration
         DetectionBitSequence_ZF = qamdemod(DetectionSymbolSequence_ZF.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)'; % Detection
         DetectionBitSequence_MMSE = qamdemod(DetectionSymbolSequence_MMSE.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)'; % tmp value;
         DetectionBitSequence_MLD = qamdemod(DetectionSymbolSequence_MLD.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)';
-        for ii=0:length(DetectionSymbolSequence_MLD)-1
-            Detected = DetectionBitSequence_MMSE(1,ii*2+1)*2+DetectionBitSequence_MMSE(1,ii*2+2);
-            Bit = BitSequence(1,2*ii+1)*2+BitSequence(1,2*ii+2);
-            if Detected~=Bit
-%                 hi(1,Bit+1)=hi(1,Bit+1)+1;
-                disp('blue')
-                disp(DetectionSymbolSequence_MMSE(1,ii+1))
-                disp('green')
-                disp(DetectionSymbolSequence_ZF(1,ii+1))
-                figure()
-                plot(DetectionSymbolSequence_MMSE(1,ii+1), 'bo');
-                hold on
-                plot(qammod(Bit, M), 'ro');
-                plot(DetectionSymbolSequence_ZF(1,ii+1), 'g^');
-                axis([-3 3 -3 3])
-                grid on
 
-                pause
-                close all
-            end
-        end
         ErrorCount_ZF(1, indx_EbN0) = ErrorCount_ZF(1, indx_EbN0) + sum(DetectionBitSequence_ZF~=BitSequence);
         ErrorCount_MMSE(1, indx_EbN0) = ErrorCount_MMSE(1, indx_EbN0) + sum(DetectionBitSequence_MMSE~=BitSequence);
         ErrorCount_MLD(1, indx_EbN0) = ErrorCount_MLD(1, indx_EbN0) + sum(DetectionBitSequence_MLD~=BitSequence);
-        record(1,indx_EbN0) = record(1,indx_EbN0) + sum(abs(DetectionSymbolSequence_MMSE-DetectionSymbolSequence_ZF))/length(DetectionSymbolSequence_ZF);
     end
 %     toc
     
@@ -117,7 +90,6 @@ hold on
 semilogy(EsN0_dB, BER_Simulation_ZF, 'bo');
 semilogy(EsN0_dB, BER_Simulation_MMSE, 'bx');
 semilogy(EsN0_dB, BER_Simulation_MLD, 'b^');
-semilogy(EsN0_dB, record, 'g--');
 
 
 axis([-2 20 10^-3 0.5])
