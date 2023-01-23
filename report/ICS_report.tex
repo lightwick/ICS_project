@@ -47,6 +47,7 @@ EsN0 = db2pow(EsN0_dB);
 EbN0 = EsN0 / log2(M);
 EbN0_dB = pow2db(EbN0);
 
+NumberOfSignals = 1;
 LengthBitSequence = NumberOfSignals*log2(M); % log2(M) bits per signal
 
 % Bit Generation
@@ -85,14 +86,62 @@ DetectionSymbolSequence_MMSE = ReceivedSymbolSequence .* w_mmse;
 DetectionBitSequence_MMSE = qamdemod(DetectionSymbolSequence_MMSE.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)';
 \end{lstlisting}
 \subsection{MLD(Maximum Likelihood Detection)}
+\begin{gather}
+\hat{s}=\operatorname*{argmin}_s \abs{y-hs}^2
+\end{gather}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
 alphabet = qammod([0:M-1], M, 'UnitAveragePower', true);
 arg = (ones(length(alphabet),1) * ReceivedSymbolSequence) - (alphabet.' * H);
-arg = abs(arg).^2;
-[val,idx] = min(arg);
+[val,idx] = min(abs(arg).^2;);
 DetectionBitSequence_MLD = reshape(de2bi(idx-1, log2(M), 'left-msb')', 1, []);
 \end{lstlisting}
+\textsl{arg}는 $(y-hs)$를 나타낸 matrix이다. arg의 $length(alphabet)\times length(SymbolSequence)$이다. ($M \times l$)
+\begin{gather}
+ReceivedSymbolSequence=\{d_1, d_2, ..., d_l\}\\
+alphabet=\{a_1, a_2, ..., a_M\}\\
+H=\{h_1, h_2, ..., h_l\}\\
+\end{gather}
+\begin{gather}
+	\begin{split}
+		arg &=
+		\begin{bmatrix}
+		d_1 & d_2 & ... & d_{l-1} & d_l\\
+		\vdots & \vdots & \vdots & \vdots & \vdots \\
+		d_1 & d_2 & ... & d_{l-1} & d_l
+		\end{bmatrix}
+		- 
+		\begin{bmatrix}
+		a_{1}h_{1} & a_{1}h_{2} & ... & a_{1}h_{l-1} & a_{1}h_{l}\\
+		a_{2}h_{1} & a_{2}h_{2} & ... & a_{2}h_{l-1} & a_{2}h_{l}\\
+		\vdots & \vdots & \vdots & \vdots & \vdots \\
+		a_{M-1}h_{1} & a_{M-1}h_{2} & ... & a_{M-1}h_{l-1} & a_{M-1}h_{l}\\
+		a_{M}h_{1} & a_{1}h_{2} & ... & a_{M-1}h_{l-1} & a_{M}h{l}h_{l}
+		\end{bmatrix}\\
+		&=
+		\begin{bmatrix}
+		d_1-a_{1}h_{1} & d_2-a_{1}h_{2} & ... & d_{l-1}-a_{1}h_{l-1} & d_{l}-a_{1}h_{l}\\
+		d_1-a_{2}h_{1} & d_2-a_{2}h_{2} & ... & d_{l-1}-a_{2}h_{l-1} & d_{l}-a_{2}h_{l}\\
+		\vdots & \vdots & \vdots & \vdots & \vdots \\
+		d_1-a_{M-1}h_{1} & d_2-a_{M-1}h_{2} & ... & d_{l-1}-a_{M-1}h_{l-1} & d_{l}-a_{M-1}h_{l}\\
+		d_1-a_{M}h_{1} & d_2-a_{1}h_{2} & ... & d_{l-1}-a_{M-1}h_{l-1} & d_{l}-a_{M}h{l}h_{l}
+		\end{bmatrix}\\
+	\end{split}
+\end{gather}
 \section{결과 및 분석}
+\subsection{Simulation Result}
+이론값은 \textsl{Matlab}의 \textsl{berfading} 함수를 통해 얻어졌다.
+\begin{figure}
+	\includegraphics[width=\textwidth]{16qamunit.jpg}
+	\caption{Binary Modulation}
+\end{figure}
+\begin{figure}
+	\includegraphics[width=\textwidth]{16qamunit.jpg}
+	\caption{4-QAM}
+\end{figure}
+\begin{figure}
+	\includegraphics[width=\textwidth]{16qamunit.jpg}
+	\caption{16-QAM}
+\end{figure}
 \subsection{Normalization Factor}
 코드 내에서 직접적으로 쓰이지는 않았지만 생각해볼 만한 부분은 \textsl{Normalization Factor}이다. 이 \textsl{Normalization Factor}를 사용하여 평균 전력이 1W가 되게끔 할 수 있다.\\
 \\
@@ -106,9 +155,9 @@ alphabet = qammod([0:M-1], M, 'UnitAveragePower', true);
 Normalization_Factor = sqrt(2/3*(M-1));
 alphabet = qammod([0:M-1], M) / Normalization_Factor;
 \end{lstlisting}
-위의 \textsl{Code 1}과 \textsl{Code 2}는 동일한 결과를 이룬다.\\
+\textsl{Code 1}과 \textsl{Code 2}는 동일한 결과를 이룬다.\\
 
-$M=2^2n$ $(n=1,2,3,...)$일 때의 \textsl{Normalization Factor}를 일반화 시켜보겠다.\\
+$M=2^{2n}$ $(n=1,2,3,...)$일 때의 \textsl{Normalization Factor}를 일반화 시켜보겠다.\\
 일반적인 QAM의 Constellation Diagram을 살펴보면 실수 $\sqrt{M}$개, 허수 $\sqrt{M}$개의 point를 갖는 것을 알 수 있다.\\
 하나의 신호에 대한 값을 그 신호의 \textsl{alphabet}이라고하자. $M$개의 \textsl{alphabet}이 다음과 같다고하자.
 \begin{equation}
@@ -126,7 +175,7 @@ E_s=E[\abs{s}^2]&=\frac{1}{M}\sum_{n=1}^M \abs{s_n}^2\\
 &=\frac{2}{3}(M-1)
 \end{split}
 \end{equation}
-(2)에서의 결과를 토대로 normalization이 이뤄진 alphabet을 구할 수 있다.
+(13)에서의 결과를 토대로 normalization이 이뤄진 alphabet을 구할 수 있다.
 \begin{equation}
 normalized\ alphabet=\Big{[}\pm\frac{2n-1}{\sqrt{\frac{2}{3}(M-1)}}\pm j\cdot\frac{2n-1}{\sqrt{\frac{2}{3}(M-1)}}\Big{]} \qquad n\in\{1,2,...,\sqrt{M}\}
 \end{equation}
@@ -148,7 +197,7 @@ normalized\ alphabet=\Big{[}\pm\frac{2n-1}{\sqrt{\frac{2}{3}(M-1)}}\pm j\cdot\fr
 	\caption{16-QAM Constellation}
 \end{figure}
 \\
-\subsection{M=2,4일 때 ZF, MMSE, MLD의 BER의 동일성}
+\subsection{Binary Modulation, 4-QAM에서 Receiver간 BER의 동일성}
 실험 결과에 따르면, Binary Modulation일 때와 4-QAM일 때 어떤 ZF, MMSE, MLD 방식을 사용한지와 무관하게 BER이 동일한 것을 관찰할 수 있었다.\\
 ZF와 MMSE의 경우를 먼저 살펴보자. ZF와 MMSE에 해당하는 조건식들은 다음과 같다.
 \begin{gather}
@@ -183,7 +232,7 @@ z_{MMSE}&=(\abs{h}^2+1/\rho)^{-1}h^*\,h\cdot z_{ZF}\\
 &=\sgn(z_{ZF})\quad (\because (\abs{h}^2+1/\rho)^{-1}h^*\,h \geq 0) \\
 \end{split}
 \end{equation}
-$\sgn(z_{MMSE})=\sgn(z_{ZF})$라는 것은 극 좌표계로 나타냈을 때의 각도가 같다는 것을 의미한다. 이는 amplitude보다는 phase에 영향을 받는 binary modulation이나 4-QAM의 경우, 같은 $h$, $\rho$, $s$의 값이 주어졌을 때 감지되는 signal은 ZF, MMSE 종류와 관계없이 동일해지는 결과를 야기한다.\\
+$\sgn(z_{MMSE})=\sgn(z_{ZF})$라는 것은 극 좌표계로 나타냈을 때의 각도가 같다는 것을 의미한다.  \bd{Binary modulation}이나 \bd{4-QAM}의 경우 \bd{amplitude}가 아닌 \bd{phase}에만 영향을 받기 때문에 감지되는 signal은 receiver가 ZF인지, MMSE인지에 관계없이 동일해진다.\\
 \begin{figure}[!ht]
 	\centering
 	\begin{subfigure}{0.5\textwidth}
@@ -197,15 +246,15 @@ $\sgn(z_{MMSE})=\sgn(z_{ZF})$라는 것은 극 좌표계로 나타냈을 때의 
 	\caption{4-QAM의 ZF, MMSE Post-processing Signal Example}
 \end{figure}
 
-\bd{Figure 3}는 \textsl{Matlab}을 통해 $z_{MMSE}$와 $z_{ZF}$를 직교좌표계로 바꾼 뒤, 두 $\theta$ 값을 비교한 것이다. $\theta$값의 차이 중 가장 큰 값은 4.4409$e^{-16}$이었다. 이는 매우 작은 값으로 컴퓨터가 가지는 'finite precision'로 인해 생겨난 오차로 생각할 수 있다. 그러므로 모든 경우에 대해서 $\theta_{MMSE}-\theta_{ZF}=0$가 나타났다고 생각할 수 있다. \bd{Figure 2}의 \textsl{ZF Receiver}와 \textsl{MMSE Receiver}가 하나의 직선 위에 나타난 것을 통해 이를 시각적으로도 확인할 수 있다.
+\bd{Figure 3}는 \textsl{Matlab}을 통해 $z_{MMSE}$와 $z_{ZF}$를 직교좌표계로 바꾼 뒤, 두 $\theta$ 값을 비교한 것이다. $\theta$값의 차이 중 가장 큰 값은 4.4409$e^{-16}$이었다. 이는 매우 작은 값으로 컴퓨터가 가지는 \bd{'finite precision'}로 인해 생겨난 오차로 생각할 수 있다. 그러므로 모든 경우에 대해서 $\theta_{MMSE}-\theta_{ZF}=0$가 나타났다고 생각할 수 있다. \bd{Figure 2}의 \textsl{ZF Receiver}와 \textsl{MMSE Receiver}가 하나의 직선 위에 나타난 것을 통해 이를 시각적으로도 확인할 수 있다.
 \begin{figure}[h]
 	\centering
 	\fbox{\includegraphics[width=\textwidth]{theta.png}}
 	\caption{EsN0=5dB}
 \end{figure}
-\section{과제 외적 의문점 및 질문}
+\section{미해결 과제 外 의문점 및 질문}
 \begin{itemize}
-  \item SNR이 얼마나 커져야 \bd{ZF}와 \bd{MMSE}의 \textsl{BER}이 같아질까? 수학적 공식으로 나타낼 수 있는가?
+  \item{왜 SNR이 커질 때도 BER이 다른가??}
 \end{itemize}
 \section{Entire Code}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
@@ -249,24 +298,18 @@ for iTotal = 1 : NumberIteration
         DetectionSymbolSequence_ZF = ReceivedSymbolSequence .* w_zf; % Detection (Zero-Forcing: y / h)
 
         % MMSE Receiver
-        w_mmse = (H.*conj(H)+1/EsN0(indx_EbN0)).^(-1) .* conj(H);
-        z = ReceivedSymbolSequence .* w_mmse;
-        arg = (ones(length(alphabet),1) * z) - (alphabet.' * H .* w_mmse);
-        arg = arg .* conj(arg);
-        [val,idx] = min(arg);
-        DetectionSymbolSequence_MMSE = alphabet(idx); % TODO: could possibly simplify it more
-        DetectionSymbolSequence_MMSE = z;
+        w_mmse = (abs(H).^2+1/EsN0(indx_EbN0)).^(-1) .* conj(H);
+        DetectionSymbolSequence_MMSE = ReceivedSymbolSequence .* w_mmse;;
         
         % MLD Receiver;
         arg = (ones(length(alphabet),1) * ReceivedSymbolSequence) - (alphabet.' * H);
         arg = abs(arg).^2;
         [val,idx] = min(arg);
-        DetectionSymbolSequence_MLD = alphabet(idx);
 
         % Symbol Sequence -> Bit Sequence
         DetectionBitSequence_ZF = qamdemod(DetectionSymbolSequence_ZF.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)'; % Detection
         DetectionBitSequence_MMSE = qamdemod(DetectionSymbolSequence_MMSE.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)'; % tmp value;
-        DetectionBitSequence_MLD = qamdemod(DetectionSymbolSequence_MLD.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)';
+        DetectionBitSequence_MLD = 
 
         ErrorCount_ZF(1, indx_EbN0) = ErrorCount_ZF(1, indx_EbN0) + sum(DetectionBitSequence_ZF~=BitSequence);
         ErrorCount_MMSE(1, indx_EbN0) = ErrorCount_MMSE(1, indx_EbN0) + sum(DetectionBitSequence_MMSE~=BitSequence);

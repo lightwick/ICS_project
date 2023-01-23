@@ -10,12 +10,12 @@ Nt = 1;
 NumberOfSignals = 1;
 LengthBitSequence = Nt * NumberOfSignals*log2(M); % log2(M) bits per signal
 
-NumberIteration = 10^4;
+NumberIteration = 10^5;
 
-Es = 20:5:60;
+Es = 1;
 % Normalization_Factor = sqrt(2/3*(M-1)); % 보고서에 해당 내용 정리
 
-EsN0_dB = -2:2:20;
+EsN0_dB = [60 65];
 EsN0 = db2pow(EsN0_dB);
 
 EbN0 = EsN0 / log2(M);
@@ -43,7 +43,7 @@ for iTotal = 1 : NumberIteration
         DetectionSymbolSequence_ZF = ReceivedSymbolSequence .* w_zf; % Detection (Zero-Forcing: y / h)
 
         % MMSE Receiver
-        w_mmse = (H.*conj(H)+1/EsN0(indx_EbN0)).^(-1) .* conj(H);
+        w_mmse = (abs(H).^2+1/EsN0(indx_EbN0)).^(-1) .* conj(H);
         z = ReceivedSymbolSequence .* w_mmse;
 %         arg = (ones(length(alphabet),1) * z) - (alphabet.' * H .* w_mmse);
 %         arg = arg .* conj(arg);
@@ -68,7 +68,9 @@ for iTotal = 1 : NumberIteration
         ErrorCount_MLD(1, indx_EbN0) = ErrorCount_MLD(1, indx_EbN0) + sum(DetectionBitSequence_MLD~=BitSequence);
     end
 %     toc
-    
+    if mod(iTotal, 10000)==0
+        disp(string(iTotal/NumberIteration*100) + '% progress')
+    end
 end
 
 BER_Simulation_ZF = ErrorCount_ZF / (LengthBitSequence * NumberIteration);
