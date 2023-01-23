@@ -7,12 +7,12 @@ clc
 % Simulation
 M = 16
 Nt = 1;
-NumberOfSignals = 10^2;
+NumberOfSignals = 1;
 LengthBitSequence = Nt * NumberOfSignals*log2(M); % log2(M) bits per signal
 
-NumberIteration = 10^3;
+NumberIteration = 10^4;
 
-Es = 1;
+Es = 20:5:60;
 % Normalization_Factor = sqrt(2/3*(M-1)); % 보고서에 해당 내용 정리
 
 EsN0_dB = -2:2:20;
@@ -45,25 +45,23 @@ for iTotal = 1 : NumberIteration
         % MMSE Receiver
         w_mmse = (H.*conj(H)+1/EsN0(indx_EbN0)).^(-1) .* conj(H);
         z = ReceivedSymbolSequence .* w_mmse;
-        arg = (ones(length(alphabet),1) * z) - (alphabet.' * H .* w_mmse);
-        arg = arg .* conj(arg);
-        [val,idx] = min(arg);
-        DetectionSymbolSequence_MMSE = alphabet(idx); % TODO: could possibly simplify it more
+%         arg = (ones(length(alphabet),1) * z) - (alphabet.' * H .* w_mmse);
+%         arg = arg .* conj(arg);
+%         [val,idx] = min(arg);
+%         DetectionSymbolSequence_MMSE = alphabet(idx);
         DetectionSymbolSequence_MMSE = z;
         
         % z로 qamdemod 사용
 
-        % MLD Receiver; ZF MLD 차이점????
+        % MLD Receiver
         arg = (ones(length(alphabet),1) * ReceivedSymbolSequence) - (alphabet.' * H);
         arg = abs(arg).^2;
-        %arg = arg .* conj(arg); % -> abs(arg).^2
         [val,idx] = min(arg);
-        DetectionSymbolSequence_MLD = alphabet(idx); % TODO: could possibly simplify it more
 
         % Symbol Sequence -> Bit Sequence
         DetectionBitSequence_ZF = qamdemod(DetectionSymbolSequence_ZF.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)'; % Detection
         DetectionBitSequence_MMSE = qamdemod(DetectionSymbolSequence_MMSE.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)'; % tmp value;
-        DetectionBitSequence_MLD = qamdemod(DetectionSymbolSequence_MLD.', M, 'OutputType', 'bit', 'UnitAveragePower', 1)';
+        DetectionBitSequence_MLD = reshape(de2bi(idx-1, log2(M), 'left-msb')', 1, []);
 
         ErrorCount_ZF(1, indx_EbN0) = ErrorCount_ZF(1, indx_EbN0) + sum(DetectionBitSequence_ZF~=BitSequence);
         ErrorCount_MMSE(1, indx_EbN0) = ErrorCount_MMSE(1, indx_EbN0) + sum(DetectionBitSequence_MMSE~=BitSequence);
