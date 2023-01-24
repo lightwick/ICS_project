@@ -7,15 +7,15 @@ clc
 % Simulation
 M = 16
 Nt = 1;
-NumberOfSignals = 1;
+NumberOfSignals = 10^6;
 LengthBitSequence = Nt * NumberOfSignals*log2(M); % log2(M) bits per signal
 
-NumberIteration = 10^5;
+NumberIteration = 1;
 
 Es = 1;
 % Normalization_Factor = sqrt(2/3*(M-1)); % 보고서에 해당 내용 정리
 
-EsN0_dB = [60 65];
+EsN0_dB = -2:2:20;
 EsN0 = db2pow(EsN0_dB);
 
 EbN0 = EsN0 / log2(M);
