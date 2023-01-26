@@ -1,0 +1,51 @@
+\documentclass{article}
+
+%opening
+\title{Simulating Different Receivers in a \\Rayleigh Fading, MIMO Environment\\
+\large Project \#2}
+\author{Intelligent Communication Systems (ICS) Lab.\\노용재}
+\date{Winter Intern Seminar (2023-1)}
+
+\usepackage{kotex} % korean
+\usepackage[margin=1in]{geometry} % 둘레 margin
+\usepackage{matlab-prettifier}
+\usepackage{amsmath}
+\usepackage{graphicx} % image
+\usepackage{subcaption} % subfigure
+\usepackage{xcolor} % for coloring text
+\usepackage{amssymb} % because, therefore symbol
+\usepackage{float}
+
+\newcommand{\bd}{\textbf} % bold
+\providecommand{\abs}[1]{\lvert#1\rvert}
+\graphicspath{{./img/}}
+\newcommand{\sgn}{\operatorname{sgn}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+\vspace{0.5cm}
+\hrule
+\vspace{0.5cm}
+
+\section{Implementation}
+\subsection{ZF}
+\bd{Moore Penrose Pseudo Inverse}\\
+$W_{ZF}H=I$를 만족하는 $W_{ZF}$를 찾으려고 한다. $H^H H$는 square matrix라는 사실을 이용하여 $W_{ZF}$를 구할 수 있다는 사실을 이용해 $W_{ZF}=(H^H H)^{-1}H^H$임을 알 수 있다.
+\begin{gather}
+	\begin{split}
+		W_{ZF}H&=(H^H H)^{-1}H^H H\\
+		&=(H^H H)^{-1}(H^H H) \quad (\because associative property)\\
+		&=I
+	\end{split}
+\end{gather}
+이때, $W_{ZF}$를 $H$의 \textsl{right pseudo-inverse}라고 할 수 있다.
+\section{결과 및 분석}
+\subsection{Simulation Result}
+
+\section{미해결 \& 추가연구 필요 내용}
+\begin{itemize}
+  \item $W_{ZF}=(H^H H)^{-1}H^H$, transpose를 한다고 하더라도 동일한 결과를 가져오는 것 아닌가? 왜 zf에서 transpose가 아닌 hermitian transpose를 사용한건가?
+\end{itemize}
+\section[Entire Code]{Entire Code \footnote{Uploaded on https://github.com/lightwick/ICS\_project}}
+\end{document}
