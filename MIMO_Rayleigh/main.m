@@ -5,7 +5,7 @@ clc
 Es = 1;
 
 % Environment Varible
-M = 4
+M = 16
 Nt = 4
 Nr = Nt
 NumberIteration = 10^4;
@@ -16,7 +16,7 @@ NumberOfSignals = 1;
 LengthBitSequence = Nt * NumberOfSignals *log2(M); % log2(M) bits per signal
 NormalizationFactor = sqrt(2/3*(M-1)*Nt);
 
-EsN0_dB = 0:5:25;
+EsN0_dB = 0:5:50;
 EsN0 = db2pow(EsN0_dB);
 
 EbN0 = EsN0 / log2(M);
@@ -78,7 +78,14 @@ for iTotal = 1 : NumberIteration
         SignalErrorCount_ZF(indx_EbN0) = SignalErrorCount_ZF(indx_EbN0) + sum(BitSequence~=DetectedSignalSequence_ZF, 'all');
         
         % MMSE Receiver
+        w_mmse = inv(H' * H + Nt / EsN0(indx_EbN0) * eye(Nr)) * H';
+        DetectedSymbolSequence_MMSE = w_mmse * ReceivedSymbolSequence; % Detection (Zero-Forcing: y / h)
         
+        DetectedSignalSequence_MMSE = qamdemod(DetectedSymbolSequence_MMSE*NormalizationFactor, M); % Detection
+        DetectedBinary_ZF = de2bi(DetectedSignalSequence_MMSE, log2(M), 'left-msb');
+        
+        BitErrorCount_MMSE(indx_EbN0) = BitErrorCount_MMSE(indx_EbN0) + sum(BitBinary~=DetectedBinary_ZF, 'all');
+        SignalErrorCount_MMSE(indx_EbN0) = SignalErrorCount_MMSE(indx_EbN0) + sum(BitSequence~=DetectedSignalSequence_MMSE, 'all');
     end
     if mod(iTotal-1, FivePercent)==0
         ElapsedTime = toc;
@@ -115,8 +122,8 @@ semilogy(EsN0_dB, BER_MLD, 'x','Color', '#D95319');
 semilogy(EsN0_dB, SER_ZF, 'bo');
 semilogy(EsN0_dB, BER_ZF, 'bx');
 
-semilogy(EsN0_dB, SER_ZF, 'bo');
-semilogy(EsN0_dB, BER_ZF, 'bx');
+semilogy(EsN0_dB, SER_MMSE, 'o', 'Color', "#4DBEEE");
+semilogy(EsN0_dB, BER_MMSE, 'x', 'Color', "#4DBEEE");
 % semilogy(EsN0_dB, BER_Simulation_MMSE, 'bx');
 % semilogy(EsN0_dB, BER_Simulation_MLD, 'b^');
 
