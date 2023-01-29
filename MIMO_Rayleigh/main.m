@@ -4,35 +4,32 @@ clc
 
 Es = 1;
 
-% Output Control
-BER = true
-
 % Environment Varible
-M = 4
-Nt = 4
+M = 16
+Nt = 2
 Nr = Nt
-NumberIteration = 10^4;
+NumberIteration = 10^5;
 NumberOfSignals = 1;
 
 % Simulation
 % TODO: LengthBitSequence and Nt, Nr independent하게 구성
-LengthBitSequence = Nt * NumberOfSignals *log2(M); % log2(M) bits per signal
+LengthBitSequence = Nt * log2(M); % log2(M) bits per signal
 NormalizationFactor = sqrt(2/3*(M-1)*Nt);
 
-EsN0_dB = 0:5:50;
-EsN0 = db2pow(EsN0_dB);
+EbN0_dB = 0:5:25;
+EbN0 = db2pow(EbN0_dB);
 
-EbN0 = EsN0 / log2(M);
-EbN0_dB = pow2db(EbN0);
+EsN0 = EbN0 * log2(M);
+EsN0_db = pow2db(EsN0);
 
-BitErrorCount_ZF = zeros(1, length(EbN0_dB));
-SignalErrorCount_ZF = zeros(1, length(EbN0_dB));
+BitErrorCount_ZF = zeros(1, length(EsN0_db));
+SignalErrorCount_ZF = zeros(1, length(EsN0_db));
 
-BitErrorCount_MLD = zeros(1, length(EbN0_dB));
-SignalErrorCount_MLD = zeros(1, length(EbN0_dB));
+BitErrorCount_MLD = zeros(1, length(EsN0_db));
+SignalErrorCount_MLD = zeros(1, length(EsN0_db));
 
-BitErrorCount_MMSE = zeros(1, length(EbN0_dB));
-SignalErrorCount_MMSE = zeros(1, length(EbN0_dB));
+BitErrorCount_MMSE = zeros(1, length(EsN0_db));
+SignalErrorCount_MMSE = zeros(1, length(EsN0_db));
 
 
 AllNumbers = de2bi([0:M^Nt-1], Nt*log2(M), 'left-msb');
@@ -53,13 +50,13 @@ for iTotal = 1 : NumberIteration
         tic
     end
     % Bit Generation
-    BitSequence = randi([0 M-1], Nt, 1);
-    BitBinary = de2bi(BitSequence, log2(M), 'left-msb');
-    SymbolSequence = qammod(BitSequence, M) / NormalizationFactor;
+    SignalSequence = randi([0 M-1], Nt, 1);
+    SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
+    SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
     
     NoiseSequence = (randn(Nt, 1) + 1j * randn(Nt, 1)) / sqrt(2); % Noise (n) Generation
     H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) ./ sqrt(2); % Receiver x Transmitter
-    for indx_EbN0 = 1 : length(EbN0)
+    for indx_EbN0 = 1 : length(EsN0)
         % Received Signal (y = hs + n) Generation
         ReceivedSymbolSequence = H * SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx_EbN0)); % log2(M)x1 matrix
         
@@ -69,18 +66,18 @@ for iTotal = 1 : NumberIteration
         DetectedBinary_MLD = reshape(de2bi(idx-1, log2(M)*Nt, 'left-msb'),log2(M),[])'; % MOST LIKELY WRONG
         DetectedSequence_MLD = bi2de(DetectedBinary_MLD, 'left-msb');
         
-        BitErrorCount_MLD(indx_EbN0) = BitErrorCount_MLD(indx_EbN0) + sum(BitBinary~=DetectedBinary_MLD, 'all');
-        SignalErrorCount_MLD(indx_EbN0) = SignalErrorCount_MLD(indx_EbN0) + sum(BitSequence~=DetectedSequence_MLD, 'all');
+        BitErrorCount_MLD(indx_EbN0) = BitErrorCount_MLD(indx_EbN0) + sum(SignalBinary~=DetectedBinary_MLD, 'all');
+        SignalErrorCount_MLD(indx_EbN0) = SignalErrorCount_MLD(indx_EbN0) + sum(SignalSequence~=DetectedSequence_MLD, 'all');
         
         % ZF Receiver
-        w_zf= inv(H' * H) * H'; % Moore-Penrose inverse
+        w_zf = pinv(H); % pinv(H) = inv(H' * H) * H'
         DetectedSymbolSequence_ZF = w_zf * ReceivedSymbolSequence; % Detection (Zero-Forcing: y / h)
         
         DetectedSignalSequence_ZF = qamdemod(DetectedSymbolSequence_ZF*NormalizationFactor, M); % Detection
         DetectedBinary_ZF = de2bi(DetectedSignalSequence_ZF, log2(M), 'left-msb');
         
-        BitErrorCount_ZF(indx_EbN0) = BitErrorCount_ZF(indx_EbN0) + sum(BitBinary~=DetectedBinary_ZF, 'all');
-        SignalErrorCount_ZF(indx_EbN0) = SignalErrorCount_ZF(indx_EbN0) + sum(BitSequence~=DetectedSignalSequence_ZF, 'all');
+        BitErrorCount_ZF(indx_EbN0) = BitErrorCount_ZF(indx_EbN0) + sum(SignalBinary~=DetectedBinary_ZF, 'all');
+        SignalErrorCount_ZF(indx_EbN0) = SignalErrorCount_ZF(indx_EbN0) + sum(SignalSequence~=DetectedSignalSequence_ZF, 'all');
         
         % MMSE Receiver
         w_mmse = inv(H' * H + Nt / EsN0(indx_EbN0) * eye(Nr)) * H';
@@ -89,13 +86,13 @@ for iTotal = 1 : NumberIteration
         DetectedSignalSequence_MMSE = qamdemod(DetectedSymbolSequence_MMSE*NormalizationFactor, M); % Detection
         DetectedBinary_ZF = de2bi(DetectedSignalSequence_MMSE, log2(M), 'left-msb');
         
-        BitErrorCount_MMSE(indx_EbN0) = BitErrorCount_MMSE(indx_EbN0) + sum(BitBinary~=DetectedBinary_ZF, 'all');
-        SignalErrorCount_MMSE(indx_EbN0) = SignalErrorCount_MMSE(indx_EbN0) + sum(BitSequence~=DetectedSignalSequence_MMSE, 'all');
+        BitErrorCount_MMSE(indx_EbN0) = BitErrorCount_MMSE(indx_EbN0) + sum(SignalBinary~=DetectedBinary_ZF, 'all');
+        SignalErrorCount_MMSE(indx_EbN0) = SignalErrorCount_MMSE(indx_EbN0) + sum(SignalSequence~=DetectedSignalSequence_MMSE, 'all');
     end
     if mod(iTotal-1, FivePercent)==0
         ElapsedTime = toc;
         EstimatedTime = (NumberIteration-iTotal)*ElapsedTime;
-        disp(sprintf("%.2f%%, estimated wait time %d minutes %d seconds", iTotal/NumberIteration*100, floor(EstimatedTime/60), round(mod(EstimatedTime, 60))))
+        disp(sprintf("%d%%, estimated wait time %d minutes %d seconds", round(iTotal/NumberIteration*100), floor(EstimatedTime/60), round(mod(EstimatedTime, 60))))
     end
 end
 
@@ -111,21 +108,23 @@ BER_MMSE = BitErrorCount_MMSE / (LengthBitSequence * NumberIteration);
 % Plot
 figure()
 
-if BER_Output == true
-%     semilogy(EsN0_dB, BER_MLD, 'o--','Color', '#D95319');
-    semilogy(EsN0_dB, BER_MLD, '.--','Color', '#D95319', 'MarkerSize', 15);
-    hold on
-    semilogy(EsN0_dB, BER_ZF, 'b.--', 'MarkerSize', 15);
-    semilogy(EsN0_dB, BER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15);
-else
-    semilogy(EsN0_dB, SER_MLD, '.--', 'Color', '#D95319', 'MarkerSize', 15); % 주황
-    hold on
-    semilogy(EsN0_dB, SER_ZF, 'b.--', 'MarkerSize', 15);
-    semilogy(EsN0_dB, SER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15); 
-end
-
-grid on
-legend('Theory (Rayleigh)', 'ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
-xlabel('Es/No [dB]');
+semilogy(EbN0_dB, BER_ZF, 'b.--', 'MarkerSize', 15);
+hold on
+semilogy(EbN0_dB, BER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15);
+semilogy(EbN0_dB, BER_MLD, '.--','Color', '#D95319', 'MarkerSize', 15);
 ylabel('BER');
-title('BER for QAM (M='+string(M)+')');
+title(sprintf("BER for %d-QAM %dX%d MIMO", M, Nr, Nt));
+grid on
+legend('ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
+xlabel('Eb/No [dB]');
+
+figure()
+semilogy(EbN0_dB, SER_ZF, 'b.--', 'MarkerSize', 15);
+hold on
+semilogy(EbN0_dB, SER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15); 
+semilogy(EbN0_dB, SER_MLD, '.--', 'Color', '#D95319', 'MarkerSize', 15);
+ylabel('SER');
+title(sprintf("SER for %d-QAM %dX%d MIMO", M, Nr, Nt));
+grid on
+legend('ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
+xlabel('Eb/No [dB]');
