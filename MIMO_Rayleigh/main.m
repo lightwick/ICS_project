@@ -4,8 +4,11 @@ clc
 
 Es = 1;
 
+% Output Control
+BER = true
+
 % Environment Varible
-M = 16
+M = 4
 Nt = 4
 Nr = Nt
 NumberIteration = 10^4;
@@ -41,8 +44,10 @@ for ii = 1 : M^Nt
 end
 Candidates = qammod(Candidates',M) / NormalizationFactor;
 
-alphabet = qamdemod(qammod([0:M-1], M),M) / NormalizationFactor;
-FivePercent = ceil(NumberIteration/20)
+alphabet = qammod([0:M-1], M) / NormalizationFactor;
+AvgPowerPerAntenna = mean(abs(alphabet) .^ 2)
+
+FivePercent = ceil(NumberIteration/20);
 for iTotal = 1 : NumberIteration
     if mod(iTotal-1, FivePercent)==0
         tic
@@ -90,7 +95,7 @@ for iTotal = 1 : NumberIteration
     if mod(iTotal-1, FivePercent)==0
         ElapsedTime = toc;
         EstimatedTime = (NumberIteration-iTotal)*ElapsedTime;
-        disp(sprintf("%.2f%%, estimated wait time %d minutes, %d seconds", iTotal/NumberIteration*100, floor(EstimatedTime/60), round(mod(EstimatedTime, 60))))
+        disp(sprintf("%.2f%%, estimated wait time %d minutes %d seconds", iTotal/NumberIteration*100, floor(EstimatedTime/60), round(mod(EstimatedTime, 60))))
     end
 end
 
@@ -102,35 +107,25 @@ BER_ZF = BitErrorCount_ZF / (LengthBitSequence * NumberIteration);
 
 SER_MMSE = SignalErrorCount_MMSE / (LengthBitSequence * NumberIteration);
 BER_MMSE = BitErrorCount_MMSE / (LengthBitSequence * NumberIteration);
-% BER_Simulation_ZF = ErrorCount_ZF / (LengthBitSequence * NumberIteration);
-% BER_Simulation_MMSE = ErrorCount_MMSE / (LengthBitSequence * NumberIteration);
-% BER_Simulation_MLD = ErrorCount_MLD / (LengthBitSequence * NumberIteration);
-
-if M==2
-    BER_Theory = berfading(EbN0_dB, 'psk', 2, 1);
-else
-    BER_Theory = berfading(EbN0_dB, 'qam', M, 1); % not sure if 'dataenc' needs to be specified; I don't even know what it does
-end
 
 % Plot
 figure()
-semilogy(EsN0_dB, BER_Theory, 'r--');
-hold on
-semilogy(EsN0_dB, SER_MLD, 'o', 'Color', '#D95319'); % 주황
-semilogy(EsN0_dB, BER_MLD, 'x','Color', '#D95319');
 
-semilogy(EsN0_dB, SER_ZF, 'bo');
-semilogy(EsN0_dB, BER_ZF, 'bx');
+if BER_Output == true
+%     semilogy(EsN0_dB, BER_MLD, 'o--','Color', '#D95319');
+    semilogy(EsN0_dB, BER_MLD, '.--','Color', '#D95319', 'MarkerSize', 15);
+    hold on
+    semilogy(EsN0_dB, BER_ZF, 'b.--', 'MarkerSize', 15);
+    semilogy(EsN0_dB, BER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15);
+else
+    semilogy(EsN0_dB, SER_MLD, '.--', 'Color', '#D95319', 'MarkerSize', 15); % 주황
+    hold on
+    semilogy(EsN0_dB, SER_ZF, 'b.--', 'MarkerSize', 15);
+    semilogy(EsN0_dB, SER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15); 
+end
 
-semilogy(EsN0_dB, SER_MMSE, 'o', 'Color', "#4DBEEE");
-semilogy(EsN0_dB, BER_MMSE, 'x', 'Color', "#4DBEEE");
-% semilogy(EsN0_dB, BER_Simulation_MMSE, 'bx');
-% semilogy(EsN0_dB, BER_Simulation_MLD, 'b^');
-
-
-axis([0 25 10^-3 0.5])
 grid on
-% legend('Theory (Rayleigh)', 'ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
+legend('Theory (Rayleigh)', 'ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
 xlabel('Es/No [dB]');
 ylabel('BER');
 title('BER for QAM (M='+string(M)+')');
