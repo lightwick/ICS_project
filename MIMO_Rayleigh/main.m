@@ -5,10 +5,10 @@ clc
 Es = 1;
 
 % Environment Varible
-M = 16
-Nt = 2
-Nr = Nt
-NumberIteration = 10^5;
+M = 4
+Nt = 3
+Nr = 3
+NumberIteration = 10^4;
 NumberOfSignals = 1;
 
 % Simulation
@@ -54,7 +54,7 @@ for iTotal = 1 : NumberIteration
     SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
     SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
     
-    NoiseSequence = (randn(Nt, 1) + 1j * randn(Nt, 1)) / sqrt(2); % Noise (n) Generation
+    NoiseSequence = (randn(Nr, 1) + 1j * randn(Nr, 1)) / sqrt(2); % Noise (n) Generation
     H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) ./ sqrt(2); % Receiver x Transmitter
     for indx_EbN0 = 1 : length(EsN0)
         % Received Signal (y = hs + n) Generation
