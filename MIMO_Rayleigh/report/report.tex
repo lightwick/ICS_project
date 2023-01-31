@@ -84,6 +84,9 @@ BitErrorCount_ZF(indx_EbN0) = BitErrorCount_ZF(indx_EbN0) + sum(SignalBinary~=De
 SignalErrorCount_ZF(indx_EbN0) = SignalErrorCount_ZF(indx_EbN0) + sum(SignalSequence~=DetectedSignalSequence_ZF, 'all');
 \end{lstlisting}
 \subsection{MMSE(Minimum Mean Square Error)}
+\begin{gather}
+	W_{MMSE}=\sqrt{\frac{N_t}{E_s}}(H^H+\frac{N_t}{\rho})^{-1}H^H
+\end{gather}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
 % MMSE Receiver
 w_mmse = inv(H' * H + Nt / EsN0(indx_EbN0) * eye(Nr)) * H';
