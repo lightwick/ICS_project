@@ -68,7 +68,7 @@ for iTotal = 1 : NumberIteration
     if mod(iTotal-100, FivePercent)==0
         ElapsedTime = toc;
         EstimatedTime = (NumberIteration-iTotal)*ElapsedTime;
-        disp(sprintf("%d%%, estimated wait time %d minutes %d seconds", round(iTotal/NumberIteration*100), floor(EstimatedTime/60), round(mod(EstimatedTime, 60))))
+        disp(sprintf("%d%%, estimated wait time %d minutes %d seconds", round(iTotal/NumberIteration*100), floor(EstimatedTime/60), floor(mod(EstimatedTime, 60))))
     end
 end
 
