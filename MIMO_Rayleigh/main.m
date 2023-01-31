@@ -3,7 +3,7 @@ clear all
 clc
 
 % Environment Varible
-M = 16
+M = 4
 Nt = 2
 Nr = 2
 NumberIteration = 10^3;
@@ -32,7 +32,7 @@ SignalErrorCount_MLD = zeros(1, length(EsN0_dB));
 BitErrorCount_MMSE = zeros(1, length(EsN0_dB));
 SignalErrorCount_MMSE = zeros(1, length(EsN0_dB));
 
-NormalizationFactor = sqrt(2/3*(M-1));
+NormalizationFactor = sqrt(2/3*(M-1)*Nt);
 
 FivePercent = ceil(NumberIteration/20);
 for iTotal = 1 : NumberIteration
@@ -42,7 +42,7 @@ for iTotal = 1 : NumberIteration
     % Bit Generation
     SignalSequence = randi([0 M-1], Nt, 1);
     SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
-    SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor / sqrt(Nt);
+    SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
     
     NoiseSequence = (randn(Nr, 1) + 1j * randn(Nr, 1)) / sqrt(2); % Noise (n) Generation
     H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) ./ sqrt(2); % Receiver x Transmitter
@@ -51,7 +51,7 @@ for iTotal = 1 : NumberIteration
         ReceivedSymbolSequence = sqrt(EsN0(indx_EbN0)) * H * SymbolSequence + NoiseSequence; % log2(M)x1 matrix
         
         % MLD Receiver
-        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_mld(ReceivedSymbolSequence, SignalSequence, SignalBinary,  M, H);
+        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_mld(ReceivedSymbolSequence, SignalSequence, SignalBinary,  M, H, EsN0(indx_EbN0));
         BitErrorCount_MLD(indx_EbN0) = BitErrorCount_MLD(indx_EbN0) + BitErrorCount_tmp;
         SignalErrorCount_MLD(indx_EbN0) = SignalErrorCount_MLD(indx_EbN0) + SignalErrorCount_tmp;
         
