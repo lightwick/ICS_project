@@ -30,9 +30,17 @@
 \vspace{0.5cm}
 
 \section{Implementation}
+다음의 조건을 만족하는 환경에 해당한다.
+\begin{gather}
+N_t \leq N_r
+\end{gather}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+placeholder = 4
+
 % Environment Variables
-Nr = Nt
+M = placeholder
+Nt = placeholder
+Nr =placeholder
 NormalizationFactor = sqrt(2/3*(M-1)*Nt);
 
 % Signal Generation
@@ -44,7 +52,7 @@ SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
 NoiseSequence = (randn(Nt, 1) + 1j * randn(Nt, 1)) / sqrt(2);
 H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) ./ sqrt(2);
 \end{lstlisting}
-\textsl{Normalization Factor}를 $\sqrt{\frac{2}{3}(M-1)N_t}$로 설정한 이유는 하나의 trasmitter가 $\frac{1}{N_t}$W의 전력을 갖도록 하기 위해서이다.
+\textsl{Normalization Factor}를 $\sqrt{\frac{2}{3}(M-1)N_t}$로 설정한 이유는 하나의 trasmitter가 $\frac{1}{N_t}$W의 전력을 갖도록 하기 위해서이다.\\
 \begin{figure}[H]
 	\centerline{\includegraphics[width=0.5\textwidth]{antenna.png}}
 	\caption{}
@@ -70,36 +78,70 @@ $W_{ZF}H=I$를 만족하는 $W_{ZF}$를 찾으려고 한다. $H^H H$는 square m
 	\end{split}
 \end{gather}
 이때, $W_{ZF}$를 $H$의 \textsl{right pseudo-inverse}라고 할 수 있다.\\
-\textsl{Matlab}에는 Moore Penrose Pseudo Inverse를 구할 수 있는 \bd{pinv(H)} 함수가 존재한다.
+\textsl{Matlab}에는 Moore Penrose Pseudo Inverse를 구할 수 있는 \bd{pinv(H)} 함수가 존재한다.\\
+\\
+\bd{ReceivedSymbolSequence = H * SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx$\textunderscore$EbN0))}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
-% ZF Receiver
+NormalizationFactor = sqrt(2/3*(M-1) * Nt);
+
 w_zf = pinv(H); % pinv(H) = inv(H' * H) * H'
 DetectedSymbolSequence_ZF = w_zf * ReceivedSymbolSequence;
 
-% Detection
 DetectedSignalSequence_ZF = qamdemod(DetectedSymbolSequence_ZF*NormalizationFactor, M);
 DetectedBinary_ZF = de2bi(DetectedSignalSequence_ZF, log2(M), 'left-msb');
 
-BitErrorCount_ZF(indx_EbN0) = BitErrorCount_ZF(indx_EbN0) + sum(SignalBinary~=DetectedBinary_ZF, 'all');
-SignalErrorCount_ZF(indx_EbN0) = SignalErrorCount_ZF(indx_EbN0) + sum(SignalSequence~=DetectedSignalSequence_ZF, 'all');
+BitErrorCount = sum(SignalBinary~=DetectedBinary_ZF, 'all');
+SignalErrorCount = sum(SignalSequence~=DetectedSignalSequence_ZF, 'all');
+\end{lstlisting}
+\newpage
+\noindent
+\bd{ReceivedSymbolSequence = sqrt(EsN0(indx$\textunderscore$EbN0)) * H * SymbolSequence + NoiseSequence}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+NormalizationFactor = sqrt(2/3*(M-1)*Nt);
+
+w_zf = NormalizationFactor /sqrt(EsN0) * pinv(H); % pinv(H) = inv(H' * H) * H'
+DetectedSymbolSequence_ZF = w_zf * ReceivedSymbolSequence;
+
+DetectedSignalSequence_ZF = qamdemod(DetectedSymbolSequence_ZF, M);
+DetectedBinary_ZF = de2bi(DetectedSignalSequence_ZF, log2(M), 'left-msb');
+
+BitErrorCount = sum(SignalBinary~=DetectedBinary_ZF, 'all');
+SignalErrorCount = sum(SignalSequence~=DetectedSignalSequence_ZF, 'all');
 \end{lstlisting}
 \subsection{MMSE(Minimum Mean Square Error)}
 \begin{gather}
 	W_{MMSE}=\sqrt{\frac{N_t}{E_s}}(H^H+\frac{N_t}{\rho})^{-1}H^H
 \end{gather}
+\bd{ReceivedSymbolSequence = H * SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx$\textunderscore$EbN0))}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
-% MMSE Receiver
-w_mmse = inv(H' * H + Nt / EsN0(indx_EbN0) * eye(Nr)) * H';
+NormalizationFactor = sqrt(2/3*(M-1) * Nt); % size(H,1) = Nt
+
+w_mmse = NormalizationFactor * inv(H' * H + Nt / EsN0 * eye(Nt)) * H';
+DetectedSymbolSequence_MMSE = w_mmse * ReceivedSymbolSequence;
+
+DetectedSignalSequence_MMSE = qamdemod(DetectedSymbolSequence_MMSE, M);
+DetectedBinary_MMSE = de2bi(DetectedSignalSequence_MMSE, log2(M), 'left-msb');
+
+BitErrorCount = sum(SignalBinary~=DetectedBinary_MMSE, 'all');
+SignalErrorCount = sum(SignalSequence~=DetectedSignalSequence_MMSE, 'all');
+\end{lstlisting}
+
+\noindent\bd{ReceivedSymbolSequence = sqrt(EsN0(indx$\textunderscore$EbN0)) * H * SymbolSequence + NoiseSequence}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+Nt = size(H,1);
+NormalizationFactor = sqrt(2/3*(M-1) * Nt); % size(H,1) = Nt
+
+w_mmse = NormalizationFactor / sqrt(EsN0) * inv(H' * H + Nt / EsN0 * eye(Nt)) * H';
 DetectedSymbolSequence_MMSE = w_mmse * ReceivedSymbolSequence; % Detection (Zero-Forcing: y / h)
 
-DetectedSignalSequence_MMSE = qamdemod(DetectedSymbolSequence_MMSE*NormalizationFactor, M); % Detection
-DetectedBinary_ZF = de2bi(DetectedSignalSequence_MMSE, log2(M), 'left-msb');
+DetectedSignalSequence_MMSE = qamdemod(DetectedSymbolSequence_MMSE, M); % Detection
+DetectedBinary_MMSE = de2bi(DetectedSignalSequence_MMSE, log2(M), 'left-msb');
 
-BitErrorCount_MMSE(indx_EbN0) = BitErrorCount_MMSE(indx_EbN0) + sum(SignalBinary~=DetectedBinary_ZF, 'all');
-SignalErrorCount_MMSE(indx_EbN0) = SignalErrorCount_MMSE(indx_EbN0) + sum(SignalSequence~=DetectedSignalSequence_MMSE, 'all');
+BitErrorCount = sum(SignalBinary~=DetectedBinary_MMSE, 'all');
+SignalErrorCount = sum(SignalSequence~=DetectedSignalSequence_MMSE, 'all');
 \end{lstlisting}
 \subsection{MLD(Maximum Likelihood Detection)}
-\bd{Creating All Possible Signal Combinations}
+\subsubsection{Creating All Possible Signal Combinations}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
 % Creating Matrix for all possible combinations of signals (M^Nt possible combinations)
 AllNumbers = de2bi([0:M^Nt-1], Nt*log2(M), 'left-msb');
@@ -118,20 +160,34 @@ Candidates = qammod(Candidates',M) / NormalizationFactor;
 \end{figure}
 \bd{Figure 2}은 $M=4$, $N_t=2$일 때의 \textsl{AllNumbers}의 예시이다. \textsl{AllNumbers}의 각 열을 $\log_{2}M$ 숫자의 묶음이 $N_t$개로 있는 것으로 생각한다. 그렇다면, 각 열은 가능한 하나의 signal combination으로 볼 수 있다. \textsl{Candidates}의 dimension은 $M^{N_t}\times N_t$이다. 이는 $N_t$개의 signal로 만들 수 있는 $M^{N_t}$개의 signal combination을 나타낸다.\\
 \\
-\bd{Solving For Minimum Euclidean Distance}
+\subsubsection{Solving For Minimum Euclidean Distance}
 \begin{gather}
 \hat{s}=\operatorname*{argmin}_s \abs{y-Hs}^2
 \end{gather}
+\bd{ReceivedSymbolSequence = H * SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx$\textunderscore$EbN0))}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
-% MLD Receiver
-% 'EulcideanDistance' results in Nt x M^Nt, each column representing each candidate symbol combination
+% results in Nt x M^Nt, each column representing each candidate symbol combination
 EuclideanDistance = abs(ReceivedSymbolSequence * ones(1,M^Nt) - H*Candidates).^2;
 [val, idx] = min(sum(EuclideanDistance, 1));
+
 DetectedBinary_MLD = reshape(de2bi(idx-1, log2(M)*Nt, 'left-msb'),log2(M),[])';
 DetectedSequence_MLD = bi2de(DetectedBinary_MLD, 'left-msb');
 
-BitErrorCount_MLD(indx_EbN0) = BitErrorCount_MLD(indx_EbN0) + sum(SignalBinary~=DetectedBinary_MLD, 'all');
-SignalErrorCount_MLD(indx_EbN0) = SignalErrorCount_MLD(indx_EbN0) + sum(SignalSequence~=DetectedSequence_MLD, 'all');
+BitErrorCount = sum(SignalBinary~=DetectedBinary_MLD, 'all');
+SignalErrorCount = sum(SignalSequence~=DetectedSequence_MLD, 'all');
+\end{lstlisting}
+
+\noindent\bd{ReceivedSymbolSequence = sqrt(EsN0(indx$\textunderscore$EbN0)) * H * SymbolSequence + NoiseSequence}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+% 'EuclideanDistance' results in Nt x M^Nt, each column representing each candidate symbol combination
+EuclideanDistance = abs(ReceivedSymbolSequence/sqrt(EsN0) * ones(1,M^Nt) - H*Candidates).^2;
+[val, idx] = min(sum(EuclideanDistance, 1));
+
+DetectedBinary_MLD = reshape(de2bi(idx-1, log2(M)*Nt, 'left-msb'),log2(M),[])';
+DetectedSequence_MLD = bi2de(DetectedBinary_MLD, 'left-msb');
+
+BitErrorCount = sum(SignalBinary~=DetectedBinary_MLD, 'all');
+SignalErrorCount = sum(SignalSequence~=DetectedSequence_MLD, 'all');
 \end{lstlisting}
 \begin{gather}
 ReceivedSymbolSequence=[y_1\ \hdots\ y_{N_R}]^T
@@ -223,51 +279,49 @@ ReceivedSymbolSequence=[y_1\ \hdots\ y_{N_R}]^T
 \begin{itemize}
   \item $W_{ZF}=(H^H H)^{-1}H^H$, transpose를 한다고 하더라도 동일한 결과를 가져오는 것 아닌가? 왜 ZF에서 transpose가 아닌 hermitian transpose를 사용한건가?
 \end{itemize}
-\section[Entire Code]{Entire Code \footnote{Uploaded on https://github.com/lightwick/ICS\textunderscore project/blob/main/MIMO\textunderscore Rayleigh/main.m}}
+\section[Entire Code]{Entire Code \footnote{Uploaded on https://github.com/lightwick/ICS\textunderscore project/tree/main/MIMO\textunderscore Rayleigh}}
+\subsection{ReceivedSymbolSequence = H * SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx$\textunderscore$EbN0))}
+\bd{main.m}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
 close all
-clear
+clear all
 clc
-
-Es = 1;
 
 % Environment Varible
 M = 16
-Nt = 2
-Nr = Nt
-NumberIteration = 10^5;
-NumberOfSignals = 1;
+Nt = 4
+Nr = 4
+NumberIteration = 10^4;
 
 % Simulation
 LengthBitSequence = Nt * log2(M); % log2(M) bits per signal
+LengthSignalSequence = Nt;
+
+% EbN0_dB = 0:5:25;
+% EbN0 = db2pow(EbN0_dB);
+% 
+% EsN0 = EbN0 * log2(M);
+% EsN0_db = pow2db(EsN0);
+
+EsN0_dB = 0:5:25;
+EsN0 = db2pow(EsN0_dB);
+
+EbN0 = EsN0 / log2(M);
+EbN0_dB = pow2db(EbN0);
+
+BitErrorCount_ZF = zeros(1, length(EsN0_dB));
+SignalErrorCount_ZF = zeros(1, length(EsN0_dB));
+BitErrorCount_MLD = zeros(1, length(EsN0_dB));
+SignalErrorCount_MLD = zeros(1, length(EsN0_dB));
+
+BitErrorCount_MMSE = zeros(1, length(EsN0_dB));
+SignalErrorCount_MMSE = zeros(1, length(EsN0_dB));
+
 NormalizationFactor = sqrt(2/3*(M-1)*Nt);
 
-EbN0_dB = 0:5:25;
-EbN0 = db2pow(EbN0_dB);
-
-EsN0 = EbN0 * log2(M);
-EsN0_db = pow2db(EsN0);
-
-BitErrorCount_ZF = zeros(1, length(EsN0_db));
-SignalErrorCount_ZF = zeros(1, length(EsN0_db));
-
-BitErrorCount_MLD = zeros(1, length(EsN0_db));
-SignalErrorCount_MLD = zeros(1, length(EsN0_db));
-
-BitErrorCount_MMSE = zeros(1, length(EsN0_db));
-SignalErrorCount_MMSE = zeros(1, length(EsN0_db));
-
-AllNumbers = de2bi([0:M^Nt-1], Nt*log2(M), 'left-msb');
-Candidates = zeros(M^Nt, Nt);
-for ii = 1 : M^Nt
-    for jj = 1 : Nt
-        Candidates(ii,jj) = bi2de(AllNumbers(ii,log2(M)*(jj-1)+1:log2(M)*jj), 'left-msb');
-    end
-end
-Candidates = qammod(Candidates',M) / NormalizationFactor;
-
+FivePercent = ceil(NumberIteration/20);
 for iTotal = 1 : NumberIteration
-    if mod(iTotal-1, FivePercent)==0
+    if mod(iTotal-100, FivePercent)==0
         tic
     end
     % Bit Generation
@@ -275,74 +329,147 @@ for iTotal = 1 : NumberIteration
     SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
     SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
     
-    NoiseSequence = (randn(Nt, 1) + 1j * randn(Nt, 1)) / sqrt(2); % Noise (n) Generation
+    NoiseSequence = (randn(Nr, 1) + 1j * randn(Nr, 1)) / sqrt(2); % Noise (n) Generation
     H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) ./ sqrt(2); % Receiver x Transmitter
     for indx_EbN0 = 1 : length(EsN0)
         % Received Signal (y = hs + n) Generation
         ReceivedSymbolSequence = H * SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx_EbN0)); % log2(M)x1 matrix
         
         % MLD Receiver
-        EuclideanDistance = abs(ReceivedSymbolSequence * ones(1,M^Nt) - H*Candidates).^2; % results in Nt x M^Nt, each column representing each candidate symbol combination
-        [val, idx] = min(sum(EuclideanDistance, 1));
-        DetectedBinary_MLD = reshape(de2bi(idx-1, log2(M)*Nt, 'left-msb'),log2(M),[])'; % MOST LIKELY WRONG
-        DetectedSequence_MLD = bi2de(DetectedBinary_MLD, 'left-msb');
-        
-        BitErrorCount_MLD(indx_EbN0) = BitErrorCount_MLD(indx_EbN0) + sum(SignalBinary~=DetectedBinary_MLD, 'all');
-        SignalErrorCount_MLD(indx_EbN0) = SignalErrorCount_MLD(indx_EbN0) + sum(SignalSequence~=DetectedSequence_MLD, 'all');
+        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_mld(ReceivedSymbolSequence, SignalSequence, SignalBinary,  M, H);
+        BitErrorCount_MLD(indx_EbN0) = BitErrorCount_MLD(indx_EbN0) + BitErrorCount_tmp;
+        SignalErrorCount_MLD(indx_EbN0) = SignalErrorCount_MLD(indx_EbN0) + SignalErrorCount_tmp;
         
         % ZF Receiver
-        w_zf = pinv(H); % pinv(H) = inv(H' * H) * H'
-        DetectedSymbolSequence_ZF = w_zf * ReceivedSymbolSequence; % Detection (Zero-Forcing: y / h)
-        
-        DetectedSignalSequence_ZF = qamdemod(DetectedSymbolSequence_ZF*NormalizationFactor, M); % Detection
-        DetectedBinary_ZF = de2bi(DetectedSignalSequence_ZF, log2(M), 'left-msb');
-        
-        BitErrorCount_ZF(indx_EbN0) = BitErrorCount_ZF(indx_EbN0) + sum(SignalBinary~=DetectedBinary_ZF, 'all');
-        SignalErrorCount_ZF(indx_EbN0) = SignalErrorCount_ZF(indx_EbN0) + sum(SignalSequence~=DetectedSignalSequence_ZF, 'all');
+        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_zf(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H);
+        BitErrorCount_ZF(indx_EbN0) = BitErrorCount_ZF(indx_EbN0) + BitErrorCount_tmp;
+        SignalErrorCount_ZF(indx_EbN0) = SignalErrorCount_ZF(indx_EbN0) + SignalErrorCount_tmp;
         
         % MMSE Receiver
-        w_mmse = inv(H' * H + Nt / EsN0(indx_EbN0) * eye(Nr)) * H';
-        DetectedSymbolSequence_MMSE = w_mmse * ReceivedSymbolSequence; % Detection (Zero-Forcing: y / h)
-        
-        DetectedSignalSequence_MMSE = qamdemod(DetectedSymbolSequence_MMSE*NormalizationFactor, M); % Detection
-        DetectedBinary_ZF = de2bi(DetectedSignalSequence_MMSE, log2(M), 'left-msb');
-        
-        BitErrorCount_MMSE(indx_EbN0) = BitErrorCount_MMSE(indx_EbN0) + sum(SignalBinary~=DetectedBinary_ZF, 'all');
-        SignalErrorCount_MMSE(indx_EbN0) = SignalErrorCount_MMSE(indx_EbN0) + sum(SignalSequence~=DetectedSignalSequence_MMSE, 'all');
+        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_mmse(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H, EsN0(indx_EbN0));
+        BitErrorCount_MMSE(indx_EbN0) = BitErrorCount_MMSE(indx_EbN0) + BitErrorCount_tmp;
+        SignalErrorCount_MMSE(indx_EbN0) = SignalErrorCount_MMSE(indx_EbN0) + SignalErrorCount_tmp;
+    end
+    if mod(iTotal-100, FivePercent)==0
+        ElapsedTime = toc;
+        EstimatedTime = (NumberIteration-iTotal)*ElapsedTime;
+        disp(sprintf("%d%%, estimated wait time %d minutes %d seconds", round(iTotal/NumberIteration*100), floor(EstimatedTime/60), floor(mod(EstimatedTime, 60))))
     end
 end
 
-SER_MLD = SignalErrorCount_MLD / (LengthBitSequence * NumberIteration);
+% Error Count to Ratio
+SER_MLD = SignalErrorCount_MLD / (LengthSignalSequence * NumberIteration);
 BER_MLD = BitErrorCount_MLD / (LengthBitSequence * NumberIteration);
 
-SER_ZF = SignalErrorCount_ZF / (LengthBitSequence * NumberIteration);
+SER_ZF = SignalErrorCount_ZF / (LengthSignalSequence * NumberIteration);
 BER_ZF = BitErrorCount_ZF / (LengthBitSequence * NumberIteration);
 
-SER_MMSE = SignalErrorCount_MMSE / (LengthBitSequence * NumberIteration);
+SER_MMSE = SignalErrorCount_MMSE / (LengthSignalSequence * NumberIteration);
 BER_MMSE = BitErrorCount_MMSE / (LengthBitSequence * NumberIteration);
 
 % Plot
 figure()
 
-semilogy(EbN0_dB, BER_ZF, 'b.--', 'MarkerSize', 15);
+semilogy(EsN0_dB, BER_ZF, 'b.--', 'MarkerSize', 15);
 hold on
-semilogy(EbN0_dB, BER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15);
-semilogy(EbN0_dB, BER_MLD, '.--','Color', '#D95319', 'MarkerSize', 15);
+semilogy(EsN0_dB, BER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15);
+semilogy(EsN0_dB, BER_MLD, '.--','Color', '#D95319', 'MarkerSize', 15);
 ylabel('BER');
 title(sprintf("BER for %d-QAM %dX%d MIMO", M, Nr, Nt));
 grid on
 legend('ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
-xlabel('Eb/No [dB]');
+xlabel('Es/No [dB]');
 
 figure()
-semilogy(EbN0_dB, SER_ZF, 'b.--', 'MarkerSize', 15);
+semilogy(EsN0_dB, SER_ZF, 'b.--', 'MarkerSize', 15);
 hold on
-semilogy(EbN0_dB, SER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15); 
-semilogy(EbN0_dB, SER_MLD, '.--', 'Color', '#D95319', 'MarkerSize', 15);
+semilogy(EsN0_dB, SER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15); 
+semilogy(EsN0_dB, SER_MLD, '.--', 'Color', '#D95319', 'MarkerSize', 15);
 ylabel('SER');
 title(sprintf("SER for %d-QAM %dX%d MIMO", M, Nr, Nt));
 grid on
 legend('ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
-xlabel('Eb/No [dB]');
+xlabel('Es/No [dB]');
+\end{lstlisting}
+\vspace{0.3cm}
+\bd{simulation$\textunderscore$mld.m}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+function [BitErrorCount, SignalErrorCount] = simulate_mld(ReceivedSymbolSequence, SignalSequence, SignalBinary,  M, H)
+    Nt = size(H,1);
+    NormalizationFactor = sqrt(2/3*(M-1)*Nt);
+    persistent Candidates
+    if isempty(Candidates)
+         Candidates = get_candidates(M, Nt) / NormalizationFactor;
+    end
+    % results in Nt x M^Nt, each column representing each candidate symbol combination
+    EuclideanDistance = abs(ReceivedSymbolSequence * ones(1,M^Nt) - H*Candidates).^2;
+    [val, idx] = min(sum(EuclideanDistance, 1));
+    
+    DetectedBinary_MLD = reshape(de2bi(idx-1, log2(M)*Nt, 'left-msb'),log2(M),[])';
+    DetectedSequence_MLD = bi2de(DetectedBinary_MLD, 'left-msb');
+
+    BitErrorCount = sum(SignalBinary~=DetectedBinary_MLD, 'all');
+    SignalErrorCount = sum(SignalSequence~=DetectedSequence_MLD, 'all');
+end
+
+function Candidates = get_candidates(M, Nt)
+    AllNumbers = de2bi([0:M^Nt-1], Nt*log2(M), 'left-msb');
+    Candidates = zeros(M^Nt, Nt);
+    for ii = 1 : M^Nt
+        for jj = 1 : Nt
+            Candidates(ii,jj) = bi2de(AllNumbers(ii,log2(M)*(jj-1)+1:log2(M)*jj), 'left-msb');
+        end
+    end
+    Candidates = qammod(Candidates',M);
+end
+\end{lstlisting}
+\vspace{0.3cm}
+\bd{simulation$\textunderscore$zf.m}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+function [BitErrorCount, SignalErrorCount] = simulate_zf(ReceivedSymbolSequence, SignalSequence, SignalBinary,  M, H)
+    Nt = size(H,1);
+    NormalizationFactor = sqrt(2/3*(M-1) * Nt); % size(H,1) = Nt
+    w_zf = pinv(H); % pinv(H) = inv(H' * H) * H'
+    DetectedSymbolSequence_ZF = w_zf * ReceivedSymbolSequence; % Detection (Zero-Forcing: y / h)
+
+    DetectedSignalSequence_ZF = qamdemod(DetectedSymbolSequence_ZF*NormalizationFactor, M); % Detection
+    DetectedBinary_ZF = de2bi(DetectedSignalSequence_ZF, log2(M), 'left-msb');
+
+    BitErrorCount = sum(SignalBinary~=DetectedBinary_ZF, 'all');
+    SignalErrorCount = sum(SignalSequence~=DetectedSignalSequence_ZF, 'all');
+end
+\end{lstlisting}
+\vspace{0.3cm}
+\bd{simulation$\textunderscore$mmse.m}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+function [BitErrorCount, SignalErrorCount] = simulate_mmse(ReceivedSymbolSequence, SignalSequence, SignalBinary,  M, H, EsN0)
+    Nt = size(H,1);
+    NormalizationFactor = sqrt(2/3*(M-1) * Nt); % size(H,1) = Nt
+
+    w_mmse = NormalizationFactor * inv(H' * H + Nt / EsN0 * eye(Nt)) * H';
+    DetectedSymbolSequence_MMSE = w_mmse * ReceivedSymbolSequence;
+
+    DetectedSignalSequence_MMSE = qamdemod(DetectedSymbolSequence_MMSE, M);
+    DetectedBinary_MMSE = de2bi(DetectedSignalSequence_MMSE, log2(M), 'left-msb');
+
+    BitErrorCount = sum(SignalBinary~=DetectedBinary_MMSE, 'all');
+    SignalErrorCount = sum(SignalSequence~=DetectedSignalSequence_MMSE, 'all');
+end
+\end{lstlisting}
+\subsection{ReceivedSymbolSequence = H * SymbolSequence + NoiseSequence * sqrt(1 / EsN0(indx$\textunderscore$EbN0))}
+\bd{main.m}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+\end{lstlisting}
+\vspace{0.3cm}
+\bd{simulation$\textunderscore$mld.m}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+\end{lstlisting}
+\vspace{0.3cm}
+\bd{simulation$\textunderscore$zf.m}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+\end{lstlisting}
+\vspace{0.3cm}
+\bd{simulation$\textunderscore$mmse.m}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
 \end{lstlisting}
 \end{document}
