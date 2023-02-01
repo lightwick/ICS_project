@@ -4,7 +4,7 @@ clc
 
 % Environment Varible
 M = 16
-Nt = 4
+Nt = 2
 Nr = 4
 NumberIteration = 10^4;
 
@@ -90,7 +90,7 @@ hold on
 semilogy(EsN0_dB, BER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15);
 semilogy(EsN0_dB, BER_MLD, '.--','Color', '#D95319', 'MarkerSize', 15);
 ylabel('BER');
-title(sprintf("BER for %d-QAM %dX%d MIMO", M, Nr, Nt));
+title(sprintf("BER for %d-QAM %dX%d MIMO", M, Nt, Nr));
 grid on
 legend('ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
 xlabel('Es/No [dB]');
@@ -101,7 +101,7 @@ hold on
 semilogy(EsN0_dB, SER_MMSE, '.--', 'Color', "#4DBEEE", 'MarkerSize', 15); 
 semilogy(EsN0_dB, SER_MLD, '.--', 'Color', '#D95319', 'MarkerSize', 15);
 ylabel('SER');
-title(sprintf("SER for %d-QAM %dX%d MIMO", M, Nr, Nt));
+title(sprintf("SER for %d-QAM %dX%d MIMO", M, Nt, Nr));
 grid on
 legend('ZF (Rayleigh)', 'MMSE (Rayleigh)', 'MLD (Rayleigh)');
 xlabel('Es/No [dB]');

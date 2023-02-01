@@ -1,5 +1,5 @@
 function [BitErrorCount, SignalErrorCount] = simulate_mld(ReceivedSymbolSequence, SignalSequence, SignalBinary,  M, H)
-    Nt = size(H,1);
+    Nt = size(H,2);
     NormalizationFactor = sqrt(2/3*(M-1)*Nt);
     persistent Candidates
     if isempty(Candidates)
