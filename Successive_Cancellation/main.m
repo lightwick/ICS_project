@@ -26,13 +26,16 @@ EsN0 = db2pow(EsN0_dB);
 EbN0 = EsN0 / log2(M);
 EbN0_dB = pow2db(EbN0);
 
-BitErrorCount_ZF = zeros(1, length(EsN0_dB));
-SignalErrorCount_ZF = zeros(1, length(EsN0_dB));
-BitErrorCount_MLD = zeros(1, length(EsN0_dB));
-SignalErrorCount_MLD = zeros(1, length(EsN0_dB));
+% BitErrorCount_ZF = zeros(1, length(EsN0_dB));
+% SignalErrorCount_ZF = zeros(1, length(EsN0_dB));
+% BitErrorCount_MLD = zeros(1, length(EsN0_dB));
+% SignalErrorCount_MLD = zeros(1, length(EsN0_dB));
+% 
+% BitErrorCount_MMSE = zeros(1, length(EsN0_dB));
+% SignalErrorCount_MMSE = zeros(1, length(EsN0_dB));
 
-BitErrorCount_MMSE = zeros(1, length(EsN0_dB));
-SignalErrorCount_MMSE = zeros(1, length(EsN0_dB));
+BitErrorCount = zeros(3, length(EsN0_dB));
+SignalErrorCount = zeros(3, length(EsN0_dB));
 
 NormalizationFactor = sqrt(2/3*(M-1)*Nt);
 
@@ -58,17 +61,21 @@ for iTotal = 1 : NumberIteration
 %         SignalErrorCount_MLD(indx_EbN0) = SignalErrorCount_MLD(indx_EbN0) + SignalErrorCount_tmp;
 %         
 %         % ZF Receiver
-%         [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_zf(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H, 'zf');
-%         BitErrorCount_ZF(indx_EbN0) = BitErrorCount_ZF(indx_EbN0) + BitErrorCount_tmp;
-%         SignalErrorCount_ZF(indx_EbN0) = SignalErrorCount_ZF(indx_EbN0) + SignalErrorCount_tmp;
+        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_zf(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H);
+        BitErrorCount(3,indx_EbN0) = BitErrorCount(3,indx_EbN0) + BitErrorCount_tmp;
+        SignalErrorCount(3,indx_EbN0) = SignalErrorCount(3,indx_EbN0) + SignalErrorCount_tmp;
 %         
 %         % MMSE Receiver
 %         [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_mmse(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H, EsN0(indx_EbN0));
 %         BitErrorCount_MMSE(indx_EbN0) = BitErrorCount_MMSE(indx_EbN0) + BitErrorCount_tmp;
 %         SignalErrorCount_MMSE(indx_EbN0) = SignalErrorCount_MMSE(indx_EbN0) + SignalErrorCount_tmp;
-        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_sic(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H, 'zf');
-        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_sic(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H, 'mmse');
-
+        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_sic(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H, EsN0(indx_EbN0), 'mmse');
+        BitErrorCount(1, indx_EbN0) = BitErrorCount(1, indx_EbN0) + BitErrorCount_tmp;
+        SignalErrorCount(1, indx_EbN0) = SignalErrorCount(1, indx_EbN0) + SignalErrorCount_tmp;
+        
+        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_osic(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H, EsN0(indx_EbN0), 'zf');
+        BitErrorCount(2, indx_EbN0) = BitErrorCount(2, indx_EbN0) + BitErrorCount_tmp;
+        SignalErrorCount(2, indx_EbN0) = SignalErrorCount(2, indx_EbN0) + SignalErrorCount_tmp;
     end
     if mod(iTotal-100, FivePercent)==0
         ElapsedTime = toc;
@@ -77,20 +84,23 @@ for iTotal = 1 : NumberIteration
     end
 end
 
+BER = BitErrorCount / (LengthSignalSequence * NumberIteration);
+SER = SignalErrorCount / (LengthSignalSequence * NumberIteration);
+
 % Error Count to Ratio
-SER_MLD = SignalErrorCount_MLD / (LengthSignalSequence * NumberIteration);
-BER_MLD = BitErrorCount_MLD / (LengthBitSequence * NumberIteration);
-
-SER_ZF = SignalErrorCount_ZF / (LengthSignalSequence * NumberIteration);
-BER_ZF = BitErrorCount_ZF / (LengthBitSequence * NumberIteration);
-
-SER_MMSE = SignalErrorCount_MMSE / (LengthSignalSequence * NumberIteration);
-BER_MMSE = BitErrorCount_MMSE / (LengthBitSequence * NumberIteration);
+% SER_MLD = SignalErrorCount_MLD / (LengthSignalSequence * NumberIteration);
+% BER_MLD = BitErrorCount_MLD / (LengthBitSequence * NumberIteration);
+% 
+% SER_ZF = SignalErrorCount_ZF / (LengthSignalSequence * NumberIteration);
+% BER_ZF = BitErrorCount_ZF / (LengthBitSequence * NumberIteration);
+% 
+% SER_MMSE = SignalErrorCount_MMSE / (LengthSignalSequence * NumberIteration);
+% BER_MMSE = BitErrorCount_MMSE / (LengthBitSequence * NumberIteration);
 
 % Plot
 BER_Title = sprintf("BER for %d-QAM %dX%d MIMO", M, Nt, Nr);
 SER_Title = sprintf("SER for %d-QAM %dX%d MIMO", M, Nt, Nr);
-x_axis = "Es/No"
-legend_order = ["a", "b", "c"];
-myplot(EsN0_dB, [SER_MLD; SER_MLD*2; SER_MLD*3], BER_Title, x_axis, "BER", legend_order);
-myplot(EsN0_dB, [SER_MLD; SER_MLD; SER_MLD], SER_Title, x_axis, "SER", legend_order);
+x_axis = "Es/No (dB)";
+legend_order = ["SIC", "OSIC"];
+myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
+myplot(EsN0_dB, SER, SER_Title, x_axis, "SER", legend_order);

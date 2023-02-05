@@ -1,5 +1,5 @@
 function fig = myplot(x, y, title_in, xlabel_in, ylabel_in, legend_in)
-    colors = ["#0000FF", "#4DBEEE", "#D95319", "#77AC30"]
+    colors = ["#0000FF", "#4DBEEE", "#D95319", "#77AC30"];
     
     fig = figure();
     semilogy(x, y(1,:), '.--', 'Color', colors(1),'MarkerSize', 15);
