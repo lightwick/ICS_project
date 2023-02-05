@@ -6,9 +6,9 @@ addpath('../tools/')
 
 % Environment Varible
 M = 4
-Nt = 2
-Nr = 2
-NumberIteration = 1000;
+Nt = 4
+Nr = 4
+NumberIteration = 10^4;
 
 % Simulation
 LengthBitSequence = Nt * log2(M); % log2(M) bits per signal
@@ -20,7 +20,7 @@ LengthSignalSequence = Nt;
 % EsN0 = EbN0 * log2(M);
 % EsN0_db = pow2db(EsN0);
 
-EsN0_dB = 0:5:25;
+EsN0_dB = -20:5:0;
 EsN0 = db2pow(EsN0_dB);
 
 EbN0 = EsN0 / log2(M);
@@ -73,7 +73,7 @@ for iTotal = 1 : NumberIteration
         BitErrorCount(1, indx_EbN0) = BitErrorCount(1, indx_EbN0) + BitErrorCount_tmp;
         SignalErrorCount(1, indx_EbN0) = SignalErrorCount(1, indx_EbN0) + SignalErrorCount_tmp;
         
-        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_osic(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H, EsN0(indx_EbN0), 'zf');
+        [BitErrorCount_tmp, SignalErrorCount_tmp] = simulate_osic(ReceivedSymbolSequence, SignalSequence, SignalBinary, M, H, EsN0(indx_EbN0), 'mmse');
         BitErrorCount(2, indx_EbN0) = BitErrorCount(2, indx_EbN0) + BitErrorCount_tmp;
         SignalErrorCount(2, indx_EbN0) = SignalErrorCount(2, indx_EbN0) + SignalErrorCount_tmp;
     end
