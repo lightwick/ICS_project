@@ -89,7 +89,7 @@ SER = SignalErrorCount / (LengthSignalSequence * NumberIteration);
 
 % Error Count to Ratio
 % SER_MLD = SignalErrorCount_MLD / (LengthSignalSequence * NumberIteration);
-% BER_MLD = BitErrorCount_MLD / (LengthBitSequence * NumberIteration);
+% BER_MLD = BitErrorCount_MLD / (LengthSignalSequence * NumberIteration);
 % 
 % SER_ZF = SignalErrorCount_ZF / (LengthSignalSequence * NumberIteration);
 % BER_ZF = BitErrorCount_ZF / (LengthBitSequence * NumberIteration);
@@ -101,6 +101,6 @@ SER = SignalErrorCount / (LengthSignalSequence * NumberIteration);
 BER_Title = sprintf("BER for %d-QAM %dX%d MIMO", M, Nt, Nr);
 SER_Title = sprintf("SER for %d-QAM %dX%d MIMO", M, Nt, Nr);
 x_axis = "Es/No (dB)";
-legend_order = ["SIC", "OSIC"];
+legend_order = ["SIC", "OSIC", "ZF"];
 myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
 myplot(EsN0_dB, SER, SER_Title, x_axis, "SER", legend_order);
