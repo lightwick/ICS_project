@@ -9,7 +9,7 @@ function [BitErrorCount, SignalErrorCount] = simulate_sic(ReceivedSymbolSequence
             w = NormalizationFactor * pinv(H); % pinv(H) = inv(H' * H) * H'
         else
             % TODO: not sure what to do about Nt; should it be decreased???
-            w = NormalizationFactor * inv(H' * H + Nt / EsN0 * eye(size(H,2))) * H';
+            w = NormalizationFactor * inv(H' * H + size(H,2) / EsN0 * eye(size(H,2))) * H';
         end
         w = w(1,:);
         DetectedSymbol = w * ReceivedSymbolSequence;
