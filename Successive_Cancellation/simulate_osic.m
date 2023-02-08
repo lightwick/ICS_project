@@ -14,7 +14,6 @@ function [BitErrorCount, SignalErrorCount] = simulate_osic(ReceivedSymbolSequenc
         if strcmp(ReceiverType, 'zf')
             w = NormalizationFactor * pinv(H); % pinv(H) = inv(H' * H) * H'
         else
-            % TODO: not sure what to do about Nt; should it be decreased???
             w = NormalizationFactor * inv(H' * H + Nt / EsN0 * eye(size(H,2))) * H';
         end
         wH = abs(w*H).^2;
