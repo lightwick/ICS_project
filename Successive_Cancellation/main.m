@@ -106,8 +106,13 @@ SER = SignalErrorCount / (LengthSignalSequence * NumberIteration);
 BER_Title = sprintf("BER for %d-QAM %dX%d MIMO", M, Nt, Nr);
 SER_Title = sprintf("SER for %d-QAM %dX%d MIMO", M, Nt, Nr);
 x_axis = "Es/No (dB)";
+<<<<<<< HEAD
 legend_order = ["ZF", "SIC-ZF", "MMSE", "SIC-MMSE", "OSIC-ZF", "OSIC-MMSE", "MLD"];
 myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
 ylim([10^(-4) 1])
 myplot(EsN0_dB, SER, SER_Title, x_axis, "SER", legend_order);
 ylim([10^(-4) 1])
+
+legend_order = ["SIC", "OSIC", "ZF"];
+myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
+myplot(EsN0_dB, SER, SER_Title, x_axis, "SER", legend_order);
