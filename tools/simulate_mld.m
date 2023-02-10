@@ -3,7 +3,14 @@ function [BitErrorCount, SignalErrorCount] = simulate_mld(ReceivedSymbolSequence
     NormalizationFactor = sqrt(2/3*(M-1)*Nt);
     persistent Candidates
     if isempty(Candidates)
-         Candidates = get_candidates(M, Nt) / NormalizationFactor;
+%          Candidates = get_candidates(M, Nt) / NormalizationFactor;
+         Candidates = zeros(M^Nt, Nt);
+         for ii = 0:M^Nt-1
+             for jj = 1:Nt
+                 Candidates(ii+1,jj) = mod(floor(ii/M^(Nt-jj)),M);
+             end
+         end
+         Candidates = qammod(Candidates', M) / NormalizationFactor;
     end
     % results in Nt x M^Nt, each column representing each candidate symbol combination
     EuclideanDistance = abs(ReceivedSymbolSequence * ones(1,M^Nt) - H*Candidates).^2;
@@ -24,5 +31,5 @@ function Candidates = get_candidates(M, Nt)
             Candidates(ii,jj) = bi2de(AllNumbers(ii,log2(M)*(jj-1)+1:log2(M)*jj), 'left-msb');
         end
     end
-    Candidates = qammod(Candidates',M);
+    Candidates = qammod(Candidates', M);
 end
