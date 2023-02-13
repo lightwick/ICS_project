@@ -1,0 +1,154 @@
+\documentclass{article}
+
+%opening
+\title{Simulating ZF, MMSE, MLD, SIC, OSIC Receivers\\in a Rayleigh Fading, MIMO Environment\\
+\large Project \#3}
+\author{Intelligent Communication Systems (ICS) Lab.\\노용재}
+\date{Winter Intern Seminar (2023-1)}
+
+\usepackage{kotex} % korean
+\usepackage[margin=1in]{geometry} % 둘레 margin
+\usepackage{matlab-prettifier}
+\usepackage{amsmath}
+\usepackage{graphicx} % image
+\usepackage{subcaption}
+\usepackage{xcolor} % for coloring text
+\usepackage{amssymb} % because, therefore symbol
+\usepackage{float}
+\usepackage{wrapfig}
+
+\newcommand{\bd}{\textbf} % bold
+\providecommand{\abs}[1]{\lvert#1\rvert}
+\graphicspath{{./img/}}
+\newcommand{\sgn}{\operatorname{sgn}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+\vspace{0.5cm}
+\hrule
+\vspace{0.5cm}
+
+\section{Implementation}
+\subsection{SIC (Successive Interference Cancellation)}
+매 stage마다 하나의 signal(하나의 transmit antenna가 송신하는 신호)이 검출된다. 초반의 신호검출 오류가 이후의 신호 검출에 영향을 준다는 단점이 있다. (Error propagation)
+\begin{gather}
+	\begin{split}
+		H &=
+		\begin{bmatrix}
+		h_{11} & \hdots & h_{1N_T}\\
+		\vdots & \ddots & \vdots\\
+		h_{N_R1} & \hdots & h_{N_R N_T}
+		\end{bmatrix}
+		=
+		\begin{bmatrix}
+		h_1
+		\hdots
+		h_{N_T}
+		\end{bmatrix}
+	\end{split}
+\end{gather}
+
+\begin{gather}
+W=
+\begin{bmatrix}
+w_{11} & \hdots & w_{1N_R}\\
+\vdots & \ddots & \vdots\\
+w_{N_T1} & \hdots & w_{N_T N_R}
+\end{bmatrix}
+=
+\begin{bmatrix}
+w_1\\
+\vdots\\
+w_{N_T}
+\end{bmatrix}
+\end{gather}
+
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+NormalizationFactor = sqrt(2/3*(M-1) * Nt); % size(H,1) = Nt    
+for ii = 1:Nt
+    if strcmp(ReceiverType, 'zf')
+        w = NormalizationFactor * sqrt(Nt) * pinv(H);
+    else
+        w = NormalizationFactor * sqrt(Nt) * inv(H' * H + size(H,2) / EsN0 * eye(size(H,2))) * H';
+    end
+    % Regard only one transmit antenna
+    w = w(1,:);
+    DetectedSymbol = w * ReceivedSymbolSequence;
+    
+    % Signal Detection
+    DetectedSignal = qamdemod(DetectedSymbol, M);
+    
+    %% Remove the effect of the regarded transmit antenna
+    RemodulatedSignal = qammod(DetectedSignal, M); % Remodulate Detected Signal
+    ReceivedSymbolSequence = ReceivedSymbolSequence - H(:,1) * RemodulatedSignal / NormalizationFactor;
+    H(:,1) = []; % remove first column
+end
+\end{lstlisting}
+\subsection{OSIC (Successive Interference Cancellation)}
+SIC와 같이 하나의 stage에서 단 하나의 신호가 검출된다. 매 stage마다 SINR의 값이 가장 큰 signal이 검출된다. SINR은 매 stage마다 다시 계산된다.
+\begin{gather}
+\begin{split}
+SINR_p &= \frac{\sigma_s^2 |w_p h_p|^2}{\sigma_s^2 \sum_{q\neq p} |w_p h_q|^2 + \sigma_n^2 \lVert w_p \rVert^2}\\
+&=\frac{\sigma_s^2/\sigma_n^2 |w_p h_p|^2}{\sigma_s^2/\sigma_n^2 \sum_{q\neq p} |w_p h_q|^2 + \lVert w_p \rVert^2}
+\end{split}
+\end{gather}
+
+우리는 실험을 $E_s$/$N_0$에 대해 설정한 뒤 실험을 하려한다. 그렇기에 $\sigma_s^2$/$\sigma_n^2$를 $E_s$/$N_0$에 대한 식으로 나타낼 필요가 있다.
+\begin{gather}
+\frac{\sigma_s^2}{\sigma_n^2}=\left( \sqrt{\frac{E_s}{N_0}} \frac{1}{\sqrt{\frac{2}{3}(M-1)\sqrt{N_T}}}\right)^2
+=\frac{Es}{N0} \frac{1}{\frac{2}{3}(M-1) N_T}
+\end{gather}
+
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+DetectedSignalSequence = zeros(Nt,1);
+NormalizationFactor = sqrt(2/3*(M-1) * Nt);
+
+snr = EsN0 / (NormalizationFactor^2);
+HasValue = false(Nt,1);
+
+for ii = 1:Nt
+    if strcmp(ReceiverType, 'zf')
+        w = NormalizationFactor * pinv(H); % pinv(H) = inv(H' * H) * H'
+    else
+        w = NormalizationFactor * inv(H' * H + size(H,2) / EsN0 * eye(size(H,2))) * H';
+    end
+    wH_squared = abs(w*H).^2;
+    
+    %% Get Biggest SINR
+    sinr = snr*diag(wH_squared)./(snr*(sum(wH_squared,2) - diag(wH_squared))+sum(abs(w).^2,2));
+    [val,idx] = max(sinr);
+    DetectedSymbol = w(idx, :) * ReceivedSymbolSequence;
+    DetectedSignal = qamdemod(DetectedSymbol, M);
+
+    %% Relative index to absolute index (i.e. original index)
+    OriginalIndex = get_original_index(HasValue, idx);
+    DetectedSignalSequence(OriginalIndex, 1) = DetectedSignal;
+    HasValue(OriginalIndex) = true;
+
+    %% Remove the effect of the regarded transmit antenna
+    RemodulatedSignal = qammod(DetectedSignal, M);
+    ReceivedSymbolSequence = ReceivedSymbolSequence - H(:,idx) * RemodulatedSignal;
+    H(:,idx) = []; % remove column
+end
+
+function OriginalIndex = get_original_index(HasValue, idx)
+    OriginalIndex = 0;
+    while idx
+        OriginalIndex = OriginalIndex + 1;
+        if ~HasValue(OriginalIndex)
+            idx = idx - 1;
+        end
+    end
+end
+\end{lstlisting}
+SIC와 다르게 OSIC에서는 처리되는 신호의 순서가 순차적이지 않다. 다시말해, 무조건 $s=[s_1 ... s_{N_T}]^T$일때 k번째 stage에서 $s_k$ 신호가 검출되는 것은 아니다.\\
+
+매 단계에서 어떤 index의 signal이 검출될지 계산된다. 이때 계산되는 index는 \textsl{상대적인 index}이다. 그렇기 때문에 이 상대적인 \textsl{상대적인 index}을 다시 본래의 index로  바꾸어 원래의 순서대로 data sequence를 맞춰줄 필요가 있다. 코드에서 함수 \bd{get\textunderscore original\textunderscore index}가 이 역할을 해 준다.
+\section{결과 및 분석}
+\subsection{SIC의 Error Propagation}
+\section{미해결 \& 추가연구 필요 내용}
+\section[Entire Code]{Entire Code \footnote{Uploaded on https://github.com/lightwick/ICS$\textunderscore $project/tree/main/Successive$\textunderscore $Cancellation}}
+\begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
+\end{lstlisting}
+\end{document}
