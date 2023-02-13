@@ -11,10 +11,7 @@ function [BitErrorCount, SignalErrorCount] = simulate_sic(ReceivedSymbolSequence
         if strcmp(ReceiverType, 'zf')
             w = NormalizationFactor * pinv(H); % pinv(H) = inv(H' * H) * H'
         else
-            % Originally
-            % w = NormalizationFactor * inv(H' * H + size(H,2) / EsN0 * eye(size(H,2))) * H';
-            % this method is faster
-            w = NormalizationFactor * (H' * H + size(H,2) / EsN0 * eye(size(H,2))) \ H';
+            w = NormalizationFactor * inv(H' * H + size(H,2) / EsN0 * eye(size(H,2))) * H';
         end
         w = w(1,:);
         DetectedSymbol = w * ReceivedSymbolSequence;
@@ -23,7 +20,7 @@ function [BitErrorCount, SignalErrorCount] = simulate_sic(ReceivedSymbolSequence
         
         %% Remove the effect of the regarded transmit antenna
         RemodulatedSignal = alphabet(DetectedSignal+1);
-        ReceivedSymbolSequence = ReceivedSymbolSequence - H(:,1) * RemodulatedSignal / NormalizationFactor;
+        ReceivedSymbolSequence = ReceivedSymbolSequence - H(:,1) * RemodulatedSignal;
         H(:,1) = []; % remove first column
     end
     DetectedBinary = de2bi(DetectedSignalSequence, log2(M), 'left-msb');
