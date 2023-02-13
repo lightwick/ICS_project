@@ -8,6 +8,7 @@ function [BitErrorCount, SignalErrorCount] = simulate_osic(ReceivedSymbolSequenc
     end
     snr = EsN0 / (NormalizationFactor^2);
     DetectedSignalSequence = zeros(Nt,1);
+    
     HasValue = false(Nt,1);
     
     for ii = 1:Nt
@@ -16,11 +17,11 @@ function [BitErrorCount, SignalErrorCount] = simulate_osic(ReceivedSymbolSequenc
         else
             w = NormalizationFactor * inv(H' * H + size(H,2) / EsN0 * eye(size(H,2))) * H';
         end
-        wH = abs(w*H).^2;
+        wH_squared = abs(w*H).^2;
         
-        % TODO: there is definitely an error here. need fix
-        sinr = snr*diag(wH)./(snr*(sum(wH,2) - diag(wH))+sum(abs(w).^2,2));
-        [val,idx] = max(sinr);
+        %% Get Biggest SINR
+        sinr = snr*diag(wH_squared)./(snr*(sum(wH_squared,2) - diag(wH_squared))+sum(abs(w).^2,2));
+        [~,idx] = max(sinr);
         DetectedSymbol = w(idx, :) * ReceivedSymbolSequence;
         DetectedSignal = qamdemod(DetectedSymbol, M);
         
@@ -28,12 +29,10 @@ function [BitErrorCount, SignalErrorCount] = simulate_osic(ReceivedSymbolSequenc
         DetectedSignalSequence(OriginalIndex, 1) = DetectedSignal;
         HasValue(OriginalIndex) = true;
         
+        %% Remove the effect of the regarded transmit antenna
         RemodulatedSignal = alphabet(DetectedSignal+1);
         ReceivedSymbolSequence = ReceivedSymbolSequence - H(:,idx) * RemodulatedSignal;
         H(:,idx) = []; % remove column
-%         if ii ~= Nr
-%             H = H(:, 2:size(H,2));
-%         end
     end
     DetectedBinary = de2bi(DetectedSignalSequence, log2(M), 'left-msb');
     BitErrorCount = sum(SignalBinary~=DetectedBinary, 'all');

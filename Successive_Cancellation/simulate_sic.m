@@ -2,7 +2,10 @@ function [BitErrorCount, SignalErrorCount] = simulate_sic(ReceivedSymbolSequence
     Nt = size(H,2);
     Nr = size(H,1);
     NormalizationFactor = sqrt(2/3*(M-1) * Nt); % size(H,1) = Nt
-    
+    persistent alphabet;
+    if isempty(alphabet)
+        alphabet = qammod([0:M-1], M) / NormalizationFactor;
+    end
     DetectedSignalSequence = zeros(Nt,1);
     for ii = 1:Nt
         if strcmp(ReceiverType, 'zf')
@@ -14,13 +17,11 @@ function [BitErrorCount, SignalErrorCount] = simulate_sic(ReceivedSymbolSequence
         DetectedSymbol = w * ReceivedSymbolSequence;
         DetectedSignal = qamdemod(DetectedSymbol, M);
         DetectedSignalSequence(ii, 1) = DetectedSignal;
-        RemodulatedSignal = qammod(DetectedSignal, M);
-%         DetectedBinary = de2bi(DetectedSignalSequence, log2(M), 'left-msb');
+        
+        %% Remove the effect of the regarded transmit antenna
+        RemodulatedSignal = alphabet(DetectedSignal+1);
         ReceivedSymbolSequence = ReceivedSymbolSequence - H(:,1) * RemodulatedSignal / NormalizationFactor;
         H(:,1) = []; % remove first column
-%         if ii ~= Nr
-%             H = H(:, 2:size(H,2));
-%         end
     end
     DetectedBinary = de2bi(DetectedSignalSequence, log2(M), 'left-msb');
     BitErrorCount = sum(SignalBinary~=DetectedBinary, 'all');

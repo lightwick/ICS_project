@@ -14,7 +14,7 @@ function [BitErrorCount, SignalErrorCount] = simulate_mld(ReceivedSymbolSequence
     end
     % results in Nt x M^Nt, each column representing each candidate symbol combination
     EuclideanDistance = abs(ReceivedSymbolSequence * ones(1,M^Nt) - H*Candidates).^2;
-    [val, idx] = min(sum(EuclideanDistance, 1));
+    [~, idx] = min(sum(EuclideanDistance, 1));
     
     DetectedBinary_MLD = reshape(de2bi(idx-1, log2(M)*Nt, 'left-msb'),log2(M),[])';
     DetectedSequence_MLD = bi2de(DetectedBinary_MLD, 'left-msb');
