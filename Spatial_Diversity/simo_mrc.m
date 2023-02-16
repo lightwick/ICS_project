@@ -10,6 +10,6 @@ function [BitErrorCount, SignalErrorCount] = simo_mrc(ReceivedSymbolSequence, Si
     DetectedSignal = qamdemod(z/norm(H,'fro')*NormalizationFactor, M);
     DetectedBinary = de2bi(DetectedSignal, log2(M), 'left-msb');
     
-    SignalErrorCount = (DetectedSignal~=SignalSequence);
+    SignalErrorCount = sum(DetectedSignal~=SignalSequence, 'all');
     BitErrorCount = sum(SignalBinary~=DetectedBinary, 'all');
 end
