@@ -1,6 +1,6 @@
 function [BitErrorCount, SignalErrorCount] = simulate_mmse(ReceivedSymbolSequence, SignalSequence, SignalBinary,  M, H, EsN0)
     Nt = size(H,2);
-    NormalizationFactor = sqrt(2/3*(M-1) * Nt); % size(H,1) = Nt
+    NormalizationFactor = sqrt(2/3*(M-1) * Nt);
 
     w_mmse = NormalizationFactor * inv(H' * H + Nt / EsN0 * eye(Nt)) * H';
     DetectedSymbolSequence_MMSE = w_mmse * ReceivedSymbolSequence;

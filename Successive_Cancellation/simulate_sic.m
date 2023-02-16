@@ -1,7 +1,7 @@
 function [BitErrorCount, SignalErrorCount] = simulate_sic(ReceivedSymbolSequence, SignalSequence, SignalBinary,  M, H, EsN0, ReceiverType)
     Nt = size(H,2);
     Nr = size(H,1);
-    NormalizationFactor = sqrt(2/3*(M-1) * Nt); % size(H,1) = Nt
+    NormalizationFactor = sqrt(2/3*(M-1) * Nt);
     persistent alphabet;
     if isempty(alphabet)
         alphabet = qammod([0:M-1], M) / NormalizationFactor;
