@@ -6,9 +6,9 @@ dbstop if error
 addpath('../tools/')
 
 % Environment Varible
-M = 4
+M = 2
 
-NumberIteration = 10^4;
+NumberIteration = 10^5;
 SimulationNum = 3;
 
 % Simulation
@@ -28,7 +28,7 @@ EsN0_dB = pow2db(EsN0);
 % SignalErrorCount_ZF = zeros(1, length(EsN0_dB));
 % BitErrorCount_MLD = zeros(1, length(EsN0_dB));
 % SignalErrorCount_MLD = zeros(1, length(EsN0_dB));
-% 
+% 33edd
 % BitErrorCount_MMSE = zeros(1, length(EsN0_dB));
 % SignalErrorCount_MMSE = zeros(1, length(EsN0_dB));
 
@@ -61,7 +61,9 @@ for iTotal = 1 : NumberIteration
         Nt =1;
         Nr = 2;
         NormalizedSymbol = SymbolSequence(1:Nt, 1) / (NormalizationFactor * sqrt(Nt));
-        y = H(1:Nr, 1:Nt) * NormalizedSymbol + NoiseSequence(1:Nt, 1) * sqrt(1 / EsN0(indx_EbN0));
+        Noise = NoiseSequence(1:Nt, 1) * sqrt(1 / EsN0(indx_EbN0));
+
+        y = H(1:Nr, 1:Nt) * NormalizedSymbol + Noise;
         [BEC_tmp(1, indx_EbN0), SEC_tmp(1, indx_EbN0)] = simo_mrc(y(1:Nr,1), SignalSequence(1:Nt,1), SignalBinary(1:Nt, :),  M, H(1:Nr, 1:Nt));
         
         %% MISO (Alamouti)
@@ -74,12 +76,21 @@ for iTotal = 1 : NumberIteration
         
         [BEC_tmp(2, indx_EbN0), SEC_tmp(2, indx_EbN0)] = miso_alamouti(y_alamouti, SignalSequence(1:Nt, 1), SignalBinary(1:Nt, :),  M, H(1:Nr,1:Nt));
         
-        %% ZF (compare)
-        Nt =2;
+        %% MISO (MRT)
+        Nt = 2;
+        Nr = 1;
+        H_new = H(1:Nr,1:Nt);
+        [BEC_tmp(3, indx_EbN0), SEC_tmp(3, indx_EbN0)] = miso_mrt(SymbolSequence(1), SignalSequence(1), Noise(1:Nr), SignalBinary(1, :), M, H_new);
+
+        %% MIMO (Alamouti)
+        Nt = 2;
         Nr = 2;
-        NormalizedSymbol = SymbolSequence(1:Nt, 1) / (NormalizationFactor * sqrt(Nt));
-        y = H(1:Nr, 1:Nt) * NormalizedSymbol + NoiseSequence(1:Nt, 1) * sqrt(1 / EsN0(indx_EbN0));
-        [BEC_tmp(3, indx_EbN0), SEC_tmp(3, indx_EbN0)] = simulate_zf(y, SignalSequence(1:Nt,1), SignalBinary(1:Nt, :),  M, H(1:Nr, 1:Nt));
+        NormalizedSymbol = SymbolSequence(1:Nt, 1)/ (NormalizationFactor * sqrt(Nt * 2));
+        % Row prepresents antenna, Column represents time-slot
+        STBC = [NormalizedSymbol.'; -conj(NormalizedSymbol(2,1)) conj(NormalizedSymbol(1,1))].';
+        y_alamouti = (H(1:Nr, 1:Nt) * STBC).' + NoiseSequence(1:Nt, 1) * sqrt(1 / EsN0(indx_EbN0));
+        [BEC_tmp(4, indx_EbN0), SEC_tmp(4, indx_EbN0)] = mimo_alamouti(y_alamouti, SignalSequence, SignalBinary,  M, H);
+
     end
     
     BitErrorCount = BitErrorCount + BEC_tmp;
@@ -96,18 +107,21 @@ BER = BitErrorCount / (NumberIteration*log2(M)*2);
 SER = SignalErrorCount / (NumberIteration*2);
 
 BER(1,:) = BER(1,:) * 2;
-SER(1,:) = SER(1,:) * 2;
+SER(1,:) = SER(1,:) * 2
+
+BER(3,:) = BER(3,:) * 2;
+SER(3,:) = SER(3,:) * 2;
 
 % Plot
 BER_Title = sprintf("BER for %d-QAM %dX%d MIMO", M, Nt, Nr);
 SER_Title = sprintf("SER for %d-QAM %dX%d MIMO", M, Nt, Nr);
 x_axis = "Eb/No (dB)";
 
-legend_order = ["MRC", "Alamouti", "ZF"];
+legend_order = ["SIMO(MRC)", "MISO(Alamouti)", "MISO(MRT)"];
 myplot(EbN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
-ylim([10^(-4) 1])
+ylim([10^(-6) 1])
 myplot(EbN0_dB, SER, SER_Title, x_axis, "SER", legend_order);
-ylim([10^(-4) 1])
+ylim([10^(-6) 1])
 
 % colors = ["#0000FF", "#FF0000", "#4DBEEE", "#D95319", "#77AC30", "#EDB120", "#7E2F8E"];
 % a=SER./BER;
