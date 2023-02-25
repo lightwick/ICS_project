@@ -235,10 +235,11 @@ z_{MMSE}&=w_{MMSE}(hs+n)\\
 \begin{split}
 z_{MMSE}&=(\abs{h}^2+1/\rho)^{-1}h^*\,h\cdot z_{ZF}\\
 \sgn(z_{MMSE}) &= \sgn((\abs{h}^2+1/\rho)^{-1}h^*\,h\cdot z_{ZF})\\
-&=\sgn(z_{ZF})\quad (\because (\abs{h}^2+1/\rho)^{-1}h^*\,h \geq 0) \\
+%&=\sgn(z_{ZF})\quad (\because [(\abs{h}^2+1/\rho)^{-1}h^*\,h\in\mathbb{R}]\ and\ [(\abs{h}^2+1/\rho)^{-1}h^*\,h \geq 0)] \\
+&=\sgn(z_{ZF})\quad (\because A\in\mathbb{R}\ and\ A \geq 0\ |\ A= (\abs{h}^2+1/\rho)^{-1}h^*\,h)\\
 \end{split}
 \end{equation}
-$\sgn(z_{MMSE})=\sgn(z_{ZF})$라는 것은 극 좌표계로 나타냈을 때의 각도가 같다는 것을 의미한다.  \bd{Binary modulation}이나 \bd{4-QAM}의 경우 \bd{amplitude}가 아닌 \bd{phase}에만 영향을 받기 때문에 감지되는 signal은 receiver가 ZF인지, MMSE인지에 관계없이 동일해진다.\\
+\textsl{Complex signum}의 정의에 따라, $sgn(z)=\frac{z}{\abs{z}}$임을 따르면, $\sgn(z_{MMSE})=\sgn(z_{ZF})$라는 것은 극 좌표계로 나타냈을 때의 각도가 같다는 것을 의미한다. \bd{Binary modulation}이나 \bd{4-QAM}의 경우 신호의 감지에 \bd{amplitude}가 아닌 \bd{phase}에만 영향을 받기 때문에 z의 값의 phase가 같은 ZF와 MMSE는 BER이 동일해진다.\\
 \begin{figure}[H]
 	\centering
 	\fbox{\includegraphics[width=\textwidth]{theta.png}}
@@ -257,37 +258,9 @@ $\sgn(z_{MMSE})=\sgn(z_{ZF})$라는 것은 극 좌표계로 나타냈을 때의 
 	\end{subfigure}
 	\caption{4-QAM의 ZF, MMSE Post-processing Signal Example}
 \end{figure}
-\section{미해결 및 추가연구 필요}
-\subsection{SNR이 커져도 ZF와 MMSE가 같아지지 않는 이유?}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.6\textwidth]{distance.png}
-	\caption{}
-\end{figure}
-\begin{figure}[H]
-	\centering
-	\begin{subfigure}{0.3\textwidth}
-	\fbox{\includegraphics[width=.9\textwidth]{error_rate.png}}
-	\caption{}
-	\end{subfigure}
-	\begin{subfigure}{0.6\textwidth}
-	\fbox{\includegraphics[width=\textwidth]{snr_error.png}}
-	\caption{}
-	\end{subfigure}
-	\caption{EsN0=65dB}
-\end{figure}
-\bd{Figure 6}에서 볼 수 있다싶이, SNR이 커질수록 $w_{MMSE}$와 $w_{ZF}$ 간의 Euclidean Distance는 줄어들고 있다. SNR이 증가함에 따라 BER의 간극이 줄어드는 경향이 보인다. 하지만 \bd{Figure 7 (a)}에서 보다시피 $Es/N0=65(dB)$의 조건하에서도 차이가 없어지지는 않는다. \bd{Figure 7 (b)}는 $s_{MMSE}$와 $s_{ZF}$의 차이가 크게 나온 하나의 symbol 예시이다.\\
-\\
-EsN0: 65 dB = 3.1623e-07\\
-H: -1.8265e-04 + 9.1521e-04i\\
-abs(H): 9.3325e-04\\
-mean(abs(H)): 0.8862\\
-w\_mmse: -1.5385e+02 - 7.7090e+02i\\
-w\_zf:  -2.0971e+02 - 1.0508e+03i\\
-\\
-$s_{MMSE}$와 $s_{ZF}$ 차이가 큰 경우, 일반적으로 abs(H)의 값이 작은 듯하다.
-추가조사 필요..
+
 \subsection{ZF와 MLD간 BER의 동일성}
+$\hat{s}$를 감지된 신호라고 하자.
 \begin{gather}
 	\begin{split}
 	\hat{s}_{ZF}&=\operatorname*{argmin}_s \abs{z-s}^2\\
@@ -296,7 +269,34 @@ $s_{MMSE}$와 $s_{ZF}$ 차이가 큰 경우, 일반적으로 abs(H)의 값이 �
 	&=\operatorname*{argmin}_s \abs{\frac{y-hs}{h}}^2
 	\end{split}
 \end{gather}
-여기에서 $\operatorname*{argmin}_s \abs{\frac{y-hs}{h}}^2 = \operatorname*{argmin}_s \abs{y-hs}^2$  성립하는가?
+
+\begin{gather}
+\hat{s}_{ML}=\operatorname*{argmin}_s \abs{y-hs}^2
+\end{gather}
+$\operatorname*{argmin}_s \abs{\frac{y-hs}{h}}^2 = \operatorname*{argmin}_s \abs{y-hs}^2$이 성립한다면 $\hat{s}_{ZF}=\hat{s}_{ML}$ 또한 성립한다.\\
+\\
+$y-hs=\alpha\angle\theta$, $h=\gamma\angle\phi$라 하자.
+\begin{gather}
+\begin{split}
+\abs{\frac{y-hs}{h}}&=\abs{\frac{\alpha\angle\theta}{\gamma\angle\phi}}\\
+&=\abs{\frac{\alpha}{\gamma}\angle(\theta-\phi)}\\
+&=\frac{\alpha}{\gamma}\\
+&=\frac{\abs{y-hs}}{\abs{h}}\\
+\end{split}
+\end{gather}
+
+\begin{gather}
+\begin{split}
+\operatorname*{argmin}_s \abs{\frac{y-hs}{h}}^2&=\operatorname*{argmin}_s (\frac{\abs{y-hs}}{\abs{h}})^2\\
+&=\operatorname*{argmin}_s (\frac{\abs{y-hs}}{\gamma})^2\\
+&=\operatorname*{argmin}_s \frac{\abs{y-hs}^2}{\gamma^2}\\
+&=\operatorname*{argmin}_s\abs{y-hs}^2
+\end{split}
+\end{gather}
+$\operatorname*{argmin}_s \abs{\frac{y-hs}{h}}^2 = \operatorname*{argmin}_s \abs{y-hs}^2$이 성립하므로, $\hat{s}_{ZF}=\hat{s}_{ML}$이다.\\
+\\
+즉, 감지되는 신호가 같으므로 \bd{ZF와 MLD의 BER은 modulation order와 관계없이 동일하다}.
+
 \section[Entire Code]{Entire Code \footnote{Uploaded on https://github.com/lightwick/ICS\_project}}
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
 close all
