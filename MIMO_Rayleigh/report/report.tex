@@ -68,13 +68,13 @@ H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) ./ sqrt(2);
 	\end{split}
 \end{gather}
 \subsection{ZF(Zero-forcing)}
-\bd{Moore Penrose Pseudo Inverse}\\
-$W_{ZF}H=I$를 만족하는 $W_{ZF}$를 찾으려고 한다. $W_{ZF}=(H^H H)^{-1}H^H$라고 하자.
+\bd{Moore-Penrose Pseudo Inverse}\\
+$\boldsymbol{W_{ZF}H}=\boldsymbol{I}$를 만족하는 $W_{ZF}$를 찾으려고 한다. $\boldsymbol{W_{ZF}}=(\boldsymbol{H}^H \boldsymbol{H})^{-1}\boldsymbol{H}^H$라고 하자.
 \begin{gather}
 	\begin{split}
-		W_{ZF}H&=(H^H H)^{-1}H^H H\\
-		&=(H^H H)^{-1}(H^H H) \quad (\because associative\ property)\\
-		&=I
+		\boldsymbol{W_{ZF}H}&=(\boldsymbol{H^H}\boldsymbol{H})^{-1}\boldsymbol{H^H}\boldsymbol{H}\\
+		&=(\boldsymbol{H}^H \boldsymbol{H})^{-1}(\boldsymbol{H}^H \boldsymbol{H}) \quad (\because associative\ property)\\
+		&=\boldsymbol{I}
 	\end{split}
 \end{gather}
 이것이 성립하기 위해서 $(H^H H)^{-1}$ 값이 존재해야한다. 이 값이 존재하기 위해서는 $(H^H H)^{-1}$ 값이 존재해야한다.\\
@@ -151,7 +151,7 @@ SignalErrorCount = sum(SignalSequence~=DetectedSignalSequence_ZF, 'all');
 \end{lstlisting}
 \subsection{MMSE(Minimum Mean Square Error)}
 \begin{gather}
-	W_{MMSE}=\sqrt{\frac{N_t}{E_s}}(H^H+\frac{N_t}{\rho})^{-1}H^H
+	\boldsymbol{W_{MMSE}}=\sqrt{\frac{N_t}{E_s}}(\boldsymbol{H}^H+\frac{N_t}{\rho})^{-1}\boldsymbol{H}^H
 \end{gather}
 $ReceivedSymbolSequence = H * SymbolSequence + NoiseSequence / \sqrt{EsN0}$ 의 경우:
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
@@ -204,7 +204,7 @@ Candidates = qammod(Candidates',M) / NormalizationFactor;
 \newpage
 \subsubsection{Solving For Minimum Euclidean Distance}
 \begin{gather}
-\hat{s}=\operatorname*{argmin}_s \abs{y-Hs}^2
+\boldsymbol{\hat{s}}=\operatorname*{argmin}_s \lVert\boldsymbol{y}-\sqrt{\frac{E_s}{N_T}}\boldsymbol{Hs}\rVert^2
 \end{gather}
 $ReceivedSymbolSequence = H * SymbolSequence + NoiseSequence / \sqrt{EsN0}$ 의 경우:
 \begin{lstlisting}[style=Matlab-editor, frame=single, numbers=left,]
