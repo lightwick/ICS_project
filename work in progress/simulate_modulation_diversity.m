@@ -59,6 +59,12 @@ function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
     end
     
     CandidateSymbol = pagetranspose(pagemtimes(R,'none', pammod(Candidates, M), 'transpose')) / NormalizationFactor
+    
+    for page=1:M^(2*n^2)
+    for ii=2:2*n
+            RotatedSymbol(:, ii) = circshift(RotatedSymbol(:,ii), ii+1);
+    end
+        
 %      for ii = 0:M^(Nt*2)-1
 %          for jj = 1:Nt*2
 %              Candidates(ii+1,jj) = mod(floor(ii/M^(2*Nt-jj)),M);
@@ -102,6 +108,8 @@ function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
                   imag(H), imag(H)];
               
         TransmittedSignal = kron(eye(n), H_r) * x2_r;
+        
+        CandidateHX = pagemtimes(kron(eye(n), H_r), )
 %         Noise = (randn(n, n) + 1j * randn(n, n)) ./ sqrt(2);
         Noise = zeros(n,n);
         
