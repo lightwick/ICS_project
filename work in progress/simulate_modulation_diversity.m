@@ -1,4 +1,4 @@
-function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
+function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
     
     %% DEBGUG
     n = 2;
@@ -38,6 +38,7 @@ function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
     else
         error('n has to be 2 or 3');
     end
+
     %% Code Word generation
     
     %% Timer 
@@ -46,7 +47,6 @@ function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
     
     %% Candidate Generation
     Candidates = zeros(2*n, n, M^(2*n^2));
-%     Candidates = zeros(M^Nt, Nt*2);
 
     for ii = 0:M^(2*n^2)-1
         tmp = ii;
@@ -58,12 +58,16 @@ function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
         end
     end
     
-    CandidateSymbol = pagetranspose(pagemtimes(R,'none', pammod(Candidates, M), 'transpose')) / NormalizationFactor
+    CandidateSymbol = pagetranspose(pagemtimes(R,'none', pammod(Candidates, M), 'transpose')) / NormalizationFactor;
     
     for page=1:M^(2*n^2)
-    for ii=2:2*n
-            RotatedSymbol(:, ii) = circshift(RotatedSymbol(:,ii), ii+1);
+        for ii=2:n
+            CandidateSymbol(:, ii, page) = circshift(CandidateSymbol(:,ii, page), ii-1);
+        end
     end
+
+    % Resize Page
+    CandidateSymbol = reshape(CandidateSymbol, 2*n^2, 1, []);
         
 %      for ii = 0:M^(Nt*2)-1
 %          for jj = 1:Nt*2
@@ -86,7 +90,6 @@ function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
 %     power = power/(M^(Nt*2)) % from this, we can see that the power is correctly normalized
     
     BEC = zeros(length(EsN0), 1);
-    SEC = zeros(length(EsN0), 1);
     
     %% Simulation
     for iTotal = 1:iteration
@@ -98,8 +101,8 @@ function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
         
         SymbolSequence = pammod(SignalSequence, M) / NormalizationFactor;
         RotatedSymbol = (R*SymbolSequence')';
-        for ii=2:2*n
-            RotatedSymbol(:, ii) = circshift(RotatedSymbol(:,ii), ii+1);
+        for ii=2:n
+            RotatedSymbol(:, ii) = circshift(RotatedSymbol(:,ii), ii-1);
         end
         x2_r = RotatedSymbol(:);
         
@@ -109,21 +112,24 @@ function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
               
         TransmittedSignal = kron(eye(n), H_r) * x2_r;
         
-        CandidateHX = pagemtimes(kron(eye(n), H_r), )
-%         Noise = (randn(n, n) + 1j * randn(n, n)) ./ sqrt(2);
-        Noise = zeros(n,n);
+        CandidateHX = pagemtimes(kron(eye(n), H_r), CandidateSymbol);
+
+        if DEBUG
+            Noise = zeros(n,n);
+        else
+            Noise = (randn(n, n) + 1j * randn(n, n)) ./ sqrt(2);
+        end
         
         for idx = 1:length(EsN0)
             ReceivedSymbol = TransmittedSignal + Noise / sqrt(EsN0(idx));
+
             EuclideanDistance = abs(ReceivedSymbol * ones(1,M^(Nt*2)) - H*CandidateSymbol).^2;
             [~, mini] = min(sum(EuclideanDistance, 1));
             
             DetectedBinary = reshape(de2bi(mini-1, log2(M)*Nt*2, 'left-msb'),log2(M),[])';
-            DetectedSignal = bi2de(DetectedBinary, 'left-msb');
-%             DetectedSignal = bi2de(DetectedBinary, 'left-msb');
             BEC(idx) = BEC(idx) + sum(DetectedBinary~=BitSequence, 'all');
-            SEC(idx) = SEC(idx) + sum(DetectedSignal~=SignalSequence);
         end
+
         if mod(iTotal-100, FivePercent)==0
             ElapsedTime = toc;
             EstimatedTime = (iteration-iTotal)*ElapsedTime;
@@ -131,5 +137,4 @@ function [BER, SER] = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
         end
     end
     BER = BEC / (iteration*4 * log2(M)); % 4 symols per iteration; log2(M) bit per signal
-    SER = SEC/ (iteration*4);
 end
