@@ -1,11 +1,11 @@
 function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
-    
+    dbstop if error
     %% DEBGUG
     n = 2;
     eta = 2;
     EbN0_dB = 0:5;
-    iteration = 1;
-    
+    iteration = 10^4;
+    NONOISE = false;
     %% BEGIN
     % eta/2 bits per dimension = 4 levels
     % to represent k bits, we need 2^k levels
@@ -90,7 +90,7 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
 %     power = power/(M^(Nt*2)) % from this, we can see that the power is correctly normalized
     
     BEC = zeros(length(EsN0), 1);
-    
+    EuclideanDistance = zeros(size(CandidateSymbol, 3), 1);
     %% Simulation
     for iTotal = 1:iteration
         if mod(iTotal-100, FivePercent)==0
@@ -114,20 +114,22 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
         
         CandidateHX = pagemtimes(kron(eye(n), H_r), CandidateSymbol);
 
-        if DEBUG
-            Noise = zeros(n,n);
+        if NONOISE
+            Noise = zeros(2*n^2,1);
         else
-            Noise = (randn(n, n) + 1j * randn(n, n)) ./ sqrt(2);
+            Noise = randn(2*n^2, 1) / sqrt(2);
         end
         
         for idx = 1:length(EsN0)
             ReceivedSymbol = TransmittedSignal + Noise / sqrt(EsN0(idx));
-
-            EuclideanDistance = abs(ReceivedSymbol * ones(1,M^(Nt*2)) - H*CandidateSymbol).^2;
-            [~, mini] = min(sum(EuclideanDistance, 1));
             
-            DetectedBinary = reshape(de2bi(mini-1, log2(M)*Nt*2, 'left-msb'),log2(M),[])';
-            BEC(idx) = BEC(idx) + sum(DetectedBinary~=BitSequence, 'all');
+            for page=1:size(CandidateSymbol,3)
+                EuclideanDistance(page) = sum(abs(ReceivedSymbol - CandidateHX(:,:,page)).^2);
+            end
+            [~, IndexOfMin] = min(EuclideanDistance);
+            
+%             DetectedBinary = reshape(de2bi(IndexOfMin-1, log2(M)*Nt*2, 'left-msb'),log2(M),[])';
+            BEC(idx) = BEC(idx) + sum(SignalSequence~=Candidates(:,:,IndexOfMin), 'all');
         end
 
         if mod(iTotal-100, FivePercent)==0
