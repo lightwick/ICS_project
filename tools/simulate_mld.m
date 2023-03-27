@@ -1,4 +1,4 @@
-function [BER, SER] = get_mld_error_rate(M, iteration, EbN0_dB)
+function [BER, SER] = simulate_mld(M, iteration, EbN0_dB)
     EbN0 = db2pow(EbN0_dB);
     EsN0 = EbN0 * log2(M);
     EsN0_dB = pow2db(EsN0);
