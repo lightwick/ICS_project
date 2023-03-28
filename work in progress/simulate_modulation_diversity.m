@@ -1,10 +1,10 @@
 function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
     dbstop if error
     %% DEBGUG
-    n = 2;
-    eta = 2;
-    EbN0_dB = 0:5;
-    iteration = 10^4;
+%     n = 2;
+%     eta = 2;
+%     EbN0_dB = 0:5;
+%     iteration = 10^4;
     NONOISE = false;
     %% BEGIN
     % eta/2 bits per dimension = 4 levels
@@ -68,26 +68,6 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
 
     % Resize Page
     CandidateSymbol = reshape(CandidateSymbol, 2*n^2, 1, []);
-        
-%      for ii = 0:M^(Nt*2)-1
-%          for jj = 1:Nt*2
-%              Candidates(ii+1,jj) = mod(floor(ii/M^(2*Nt-jj)),M);
-%          end
-%      end
-%      Candidates = qammod(Candidates', M) / NormalizationFactor;
-%      
-%      power = zeros(1,2);
-%     for ii = 1:M^(Nt*2)
-%         a = Candidates(1,ii);
-%         b = Candidates(2,ii);
-%         c = Candidates(3,ii);
-%         d = Candidates(4,ii);
-%         X = 1/sqrt(5)*[alpha*(a+b*theta), alpha*(c+d*theta); 1j*(alpha_hat*(c+d*theta_hat)), alpha_hat*(a+b*theta_hat)];
-%         power = power + sum(abs(X).^2);
-%         CandidateSymbol(:,ii) = [real(X(1,1)); imag(X(1,1)); real(X(2,1)); imag(X(2,1)); real(X(1,2)); imag(X(1,2)); real(X(2,2)); imag(X(2,2))];
-%     end
-%     
-%     power = power/(M^(Nt*2)) % from this, we can see that the power is correctly normalized
     
     BEC = zeros(length(EsN0), 1);
     EuclideanDistance = zeros(size(CandidateSymbol, 3), 1);
