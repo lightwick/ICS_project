@@ -20,8 +20,8 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
     
     if n==2
 %         TODO: doesn't matter? or does matter?
-        lambda = (1+sqrt(5))/2;
-%         lambda = (1-sqrt(5))/2;
+%         lambda = (1+sqrt(5))/2;
+        lambda = (1-sqrt(5))/2;
         a = 1/sqrt(1+lambda^2);
         b = lambda*a;
         R = [a -b;
