@@ -7,21 +7,22 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
 %     iteration = 10^4;
     NONOISE = false;
     %% BEGIN
-    % eta/2 bits per dimension = 4 levels
+    % eta/2 bits per dimension
     % to represent k bits, we need 2^k levels
-    M = 2^(eta/2);
+    M = 2^(eta/2); % Modulation Order for one dimension
     
     EbN0 = db2pow(EbN0_dB);
-    EsN0 = EbN0 * log2(M);
+    % EsN0 = EbN0 * bits per signal
+    EsN0 = EbN0 * eta;
     EsN0_dB = pow2db(EsN0);
     
 %     NormalizationFactor = sqrt(2/3*(M-1) * n);
-    NormalizationFactor = sqrt(n);
+    NormalizationFactor = sqrt(2/3*(M^2-1)*n);
     
     if n==2
 %         TODO: doesn't matter? or does matter?
-%         lambda = (1+sqrt(5))/2;
-        lambda = (1-sqrt(5))/2;
+        lambda = (1+sqrt(5))/2;
+%         lambda = (1-sqrt(5))/2;
         a = 1/sqrt(1+lambda^2);
         b = lambda*a;
         R = [a -b;
@@ -58,26 +59,36 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
         end
     end
     
-    CandidateSymbol = pagetranspose(pagemtimes(R,'none', pammod(Candidates, M), 'transpose')) / NormalizationFactor;
+    CandidateSymbol = pammod(Candidates, M) / NormalizationFactor;
     
+    CandidateSymbol = pagetranspose(pagemtimes(R,'none', CandidateSymbol, 'transpose'));
+    
+    %% Candidate Gen, restart
     for page=1:M^(2*n^2)
         for ii=2:n
             CandidateSymbol(:, ii, page) = circshift(CandidateSymbol(:,ii, page), ii-1);
         end
     end
-
+    
     % Resize Page
     CandidateSymbol = reshape(CandidateSymbol, 2*n^2, 1, []);
     
     BEC = zeros(length(EsN0), 1);
     EuclideanDistance = zeros(size(CandidateSymbol, 3), 1);
+    
+    %% Validating Normalization
+    TotalSum = zeros(size(CandidateSymbol,1), size(CandidateSymbol, 2));
+    
+    for page=1:M^(2*n^2)
+        TotalSum(:,:) = TotalSum(:,:) + (CandidateSymbol(:,:,page).^2);
+    end
+    
     %% Simulation
     for iTotal = 1:iteration
         if mod(iTotal-100, FivePercent)==0
             tic
         end
         SignalSequence = randi([0 M-1], 2*n, n);
-%         BitSequence = de2bi(SignalSequence, log2(M)*n, 'left-msb');
         
         SymbolSequence = pammod(SignalSequence, M) / NormalizationFactor;
         RotatedSymbol = (R*SymbolSequence')';
@@ -88,7 +99,7 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
         
         H = (randn(n, n) + 1j * randn(n, n)) ./ sqrt(2); % slow fading
         H_r = [real(H), -imag(H);
-                  imag(H), imag(H)];
+                  imag(H), real(H)];
               
         TransmittedSignal = kron(eye(n), H_r) * x2_r;
         
@@ -118,5 +129,5 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
             disp(sprintf("%d%%, estimated wait time %d minutes %d seconds", round(iTotal/iteration*100), floor(EstimatedTime/60), floor(mod(EstimatedTime, 60))))
         end
     end
-    BER = BEC / (iteration*4 * log2(M)); % 4 symols per iteration; log2(M) bit per signal
+    BER = BEC / (iteration* 2*n^2 * log2(M)); % 4 symols per iteration; log2(M) bit per signal
 end
