@@ -14,7 +14,7 @@ EsN0_dB = 0:4:24;
 EsN0 = db2pow(EsN0_dB);
 EbN0 = EsN0 / log2(M);
 EbN0_dB = pow2db(EbN0);
-iteration = 10^5;  
+iteration = 10^4;
 
 %% Simulate
 BER = zeros(sim_num, length(EbN0_dB));
@@ -30,9 +30,9 @@ n = 2;
 BER_tmp = simulate_modulation_diversity(eta, n, iteration, EbN0_dB);
 BER(3,:) = BER_tmp';
 
-Nr = 2;
-Nt = 2;
-[BER_tmp, ~]  = simulate_zf(M, Nr, Nt, iteration, EbN0_dB);
+eta = 2;
+n = 2;
+BER_tmp = simulate_modulation_diversity_reduced(eta, n, iteration, EbN0_dB);
 BER(4,:) = BER_tmp';
 
 %% Plot
