@@ -12,10 +12,7 @@ function [BER, SER] = simulate_mld(M, n, iteration, EbN0_dB)
     FivePercent = ceil(iteration/20);
     
     %% START
-    persistent Candidates
-    if isempty(Candidates)
-         Candidates = get_candidates(M, Nt) / NormalizationFactor;
-    end
+    Candidates = get_candidates(M, Nt) / NormalizationFactor;
     
     BEC = zeros(length(EsN0), 1);
     SEC = zeros(length(EsN0), 1);
@@ -52,8 +49,8 @@ function [BER, SER] = simulate_mld(M, n, iteration, EbN0_dB)
         end
     end
     
-    SER = SEC/(iteration*2);
-    BER = BEC/(iteration*2*log2(M));
+    SER = SEC/(iteration*Nt);
+    BER = BEC/(iteration*Nt*log2(M));
 end
 
 function Candidates = get_candidates(M, Nt)

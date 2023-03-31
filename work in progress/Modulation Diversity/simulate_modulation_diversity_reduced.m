@@ -1,15 +1,19 @@
-function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
+function BER = simulate_modulation_diversity_reduced(eta, n, TimeFrame, iteration, EbN0_dB)
     dbstop if error
+    % 4x4 with rotation size of 2, having two time frames;
+    % TODO: think of what if rotation of 3
     %% DEBGUG
 %     n = 2;
 %     eta = 2;
 %     EbN0_dB = 0:5;
 %     iteration = 10^4;
+    assert(n==4);
     NONOISE = false;
     %% BEGIN
     % eta/2 bits per dimension
     % to represent k bits, we need 2^k levels
     M = 2^(eta/2); % Modulation Order for one dimension
+    TimeFrame = 3;
     
     EbN0 = db2pow(EbN0_dB);
     % EsN0 = EbN0 * bits per signal
@@ -19,7 +23,7 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
 %     NormalizationFactor = sqrt(2/3*(M-1) * n);
     NormalizationFactor = sqrt(2/3*(M^2-1)*n);
     
-    if n==2
+    if TimeFrame==2
 %         TODO: doesn't matter? or does matter?
         lambda = (1+sqrt(5))/2;
 %         lambda = (1-sqrt(5))/2;
@@ -27,7 +31,7 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
         b = lambda*a;
         R = [a -b;
                b  a];
-    elseif n==3
+    elseif TimeFrame==3
         phi = 2*cos(6/7*pi);
         alpha = (1+phi)/(1+phi+phi^2);
         beta = phi*alpha;
@@ -37,7 +41,7 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
                beta, gamma, -alpha;
                gamma, alpha, -beta]
     else
-        error('n has to be 2 or 3');
+        error('TimeFrame has to be 2 or 3; others not implemented yet');
     end
 
     %% Code Word generation
@@ -47,13 +51,15 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
     
     
     %% Candidate Generation
-    Candidates = zeros(2*n, n, M^(2*n^2));
-
-    for ii = 0:M^(2*n^2)-1
+    CandidateNum = M^(2*n*TimeFrame); % Number of candidates
+    Candidates = zeros(2*n, TimeFrame, CandidateNum);
+    disp(sprintf("%d Candidates", size(Candidates,3)));
+    
+    for ii = 0:CandidateNum-1
         tmp = ii;
         count = 0;
         while tmp~=0
-            Candidates(floor(count/n)+1, mod(count, n)+1, ii+1) = mod(tmp, M);
+            Candidates(floor(count/TimeFrame)+1, mod(count, TimeFrame)+1, ii+1) = mod(tmp, M);
             tmp = floor(tmp/M);
             count = count + 1;
         end
@@ -64,22 +70,22 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
     CandidateSymbol = pagetranspose(pagemtimes(R,'none', CandidateSymbol, 'transpose'));
     
     %% Candidate Gen, restart
-    for page=1:M^(2*n^2)
-        for ii=2:n
+    for page=1:CandidateNum
+        for ii=2:TimeFrame
             CandidateSymbol(:, ii, page) = circshift(CandidateSymbol(:,ii, page), ii-1);
         end
     end
-    
+%     CandidateSymbol = pagetranspose(CandidateSymbol);
     % Resize Page
-    CandidateSymbol = reshape(CandidateSymbol, 2*n^2, 1, []);
+    CandidateSymbol = reshape(CandidateSymbol, [], 1, CandidateNum);
     
     BEC = zeros(length(EsN0), 1);
-    EuclideanDistance = zeros(size(CandidateSymbol, 3), 1);
+    EuclideanDistance = zeros(CandidateNum, 1);
     
     %% Validating Normalization
     TotalSum = zeros(size(CandidateSymbol,1), size(CandidateSymbol, 2));
     
-    for page=1:M^(2*n^2)
+    for page=1:CandidateNum
         TotalSum(:,:) = TotalSum(:,:) + (CandidateSymbol(:,:,page).^2);
     end
     
@@ -88,11 +94,11 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
         if mod(iTotal-100, FivePercent)==0
             tic
         end
-        SignalSequence = randi([0 M-1], 2*n, n);
+        SignalSequence = randi([0 M-1], 2*n, TimeFrame);
         
         SymbolSequence = pammod(SignalSequence, M) / NormalizationFactor;
         RotatedSymbol = (R*SymbolSequence')';
-        for ii=2:n
+        for ii=2:TimeFrame
             RotatedSymbol(:, ii) = circshift(RotatedSymbol(:,ii), ii-1);
         end
         x2_r = RotatedSymbol(:);
@@ -101,20 +107,20 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
         H_r = [real(H), -imag(H);
                   imag(H), real(H)];
               
-        TransmittedSignal = kron(eye(n), H_r) * x2_r;
+        TransmittedSignal = kron(eye(TimeFrame), H_r) * x2_r;
         
-        CandidateHX = pagemtimes(kron(eye(n), H_r), CandidateSymbol);
+        CandidateHX = pagemtimes(kron(eye(TimeFrame), H_r), CandidateSymbol);
 
         if NONOISE
             Noise = zeros(2*n^2,1);
         else
-            Noise = randn(2*n^2, 1) / sqrt(2);
+            Noise = randn(size(TransmittedSignal,1), 1) / sqrt(2);
         end
         
         for idx = 1:length(EsN0)
             ReceivedSymbol = TransmittedSignal + Noise / sqrt(EsN0(idx));
             
-            for page=1:size(CandidateSymbol,3)
+            for page=1:CandidateNum
                 EuclideanDistance(page) = sum(abs(ReceivedSymbol - CandidateHX(:,:,page)).^2);
             end
             [~, IndexOfMin] = min(EuclideanDistance);
@@ -129,5 +135,5 @@ function BER = simulate_modulation_diversity(eta, n, iteration, EbN0_dB)
             disp(sprintf("%d%%, estimated wait time %d minutes %d seconds", round(iTotal/iteration*100), floor(EstimatedTime/60), floor(mod(EstimatedTime, 60))))
         end
     end
-    BER = BEC / (iteration* 2*n^2 * log2(M)); % 4 symols per iteration; log2(M) bit per signal
+    BER = BEC / (iteration* 2*n*TimeFrame * log2(M)); % 4 symols per iteration; log2(M) bit per signal
 end
