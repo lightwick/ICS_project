@@ -1,11 +1,11 @@
-function [BER, SER] = simulate_mld(M, iteration, EbN0_dB)
+function [BER, SER] = simulate_mld(M, n, iteration, EbN0_dB)
     EbN0 = db2pow(EbN0_dB);
     EsN0 = EbN0 * log2(M);
     EsN0_dB = pow2db(EsN0);
     
     %% DEBUG
-    Nt = 2;
-    Nr = 2;
+    Nt = n;
+    Nr = n;
     NormalizationFactor = sqrt(2/3*(M-1)*Nt);
     
     %% Timer
