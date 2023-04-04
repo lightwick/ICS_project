@@ -1,4 +1,11 @@
 function BER = simulate_modulation_diversity_reduced(eta, n, TimeFrame, iteration, EbN0_dB)
+    %% Usage Example
+%     eta = 2;
+%     n = 4;
+%     TimeFrame = 2;
+%     BER_tmp = simulate_modulation_diversity_reduced(eta, n, TimeFrame, iteration, EbN0_dB);
+%     BER(1,:) = BER_tmp';
+
     dbstop if error
     % 4x4 with rotation size of 2, having two time frames;
     % TODO: think of what if rotation of 3
@@ -13,7 +20,6 @@ function BER = simulate_modulation_diversity_reduced(eta, n, TimeFrame, iteratio
     % eta/2 bits per dimension
     % to represent k bits, we need 2^k levels
     M = 2^(eta/2); % Modulation Order for one dimension
-    TimeFrame = 3;
     
     EbN0 = db2pow(EbN0_dB);
     % EsN0 = EbN0 * bits per signal
@@ -109,6 +115,7 @@ function BER = simulate_modulation_diversity_reduced(eta, n, TimeFrame, iteratio
               
         TransmittedSignal = kron(eye(TimeFrame), H_r) * x2_r;
         
+        % I don't know why, but [(time calculating on GPU) = (time on CPU) + (transferring CandidateHX from CPU to GPU)]
         CandidateHX = pagemtimes(kron(eye(TimeFrame), H_r), CandidateSymbol);
 
         if NONOISE
@@ -117,12 +124,12 @@ function BER = simulate_modulation_diversity_reduced(eta, n, TimeFrame, iteratio
             Noise = randn(size(TransmittedSignal,1), 1) / sqrt(2);
         end
         
+        CandidateHX = gpuArray(CandidateHX);
         for idx = 1:length(EsN0)
             ReceivedSymbol = TransmittedSignal + Noise / sqrt(EsN0(idx));
+            ReceivedSymbol = gpuArray(ReceivedSymbol);
             
-            for page=1:CandidateNum
-                EuclideanDistance(page) = sum(abs(ReceivedSymbol - CandidateHX(:,:,page)).^2);
-            end
+            EuclideanDistance = sum((ReceivedSymbol - CandidateHX).^2);
             [~, IndexOfMin] = min(EuclideanDistance);
             
 %             DetectedBinary = reshape(de2bi(IndexOfMin-1, log2(M)*Nt*2, 'left-msb'),log2(M),[])';
