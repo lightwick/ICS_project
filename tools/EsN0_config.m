@@ -1,4 +1,4 @@
-assert(exist(EsN0_dB, 'var'), 'EsN0_dB must exist in the workspace')
+assert(exist('EsN0_dB', 'var'), 'EsN0_dB must exist in the workspace')
 EsN0 = db2pow(EsN0_dB);
 
 EbN0 = EsN0 / log2(M);
