@@ -15,7 +15,7 @@ NOISE = true;
 
 %% User Defined Configuration
 addpath('../tools');
-M = 16;
+M = 4;
 EsN0_dB =  0:2:18;
 if DEBUG==true
     EsN0_dB=0;
@@ -24,7 +24,7 @@ end
 Nt = 4;
 Nr = Nt;
 
-iteration = 10^5;
+iteration = 10^4;
 
 
 %% Basic Configuration
@@ -109,7 +109,6 @@ for iTotal = 1:iteration
     SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
     SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
     
-    
     %% Coding
     STBC = [SymbolSequence.'; -conj(SymbolSequence(2,1)) conj(SymbolSequence(1,1))];
     STBC_SM = zeros(2,Nt);
@@ -143,56 +142,43 @@ for iTotal = 1:iteration
     for SNR_idx = 1 : length(EsN0)
         ReceivedSignal = STBC_SM * H + Noise / sqrt(EsN0(SNR_idx)); % shape of 2xNr
         y = reshape(ReceivedSignal, [], 1);
-
         y(2:2:size(y,1), 1) = conj(y(2:2:size(y,1), 1));
 
-        x1 = zeros(M, c);
-        x2 = zeros(M, c);
-        for c_idx = 1:c
-            for m=1:M
-                x1(m, c_idx) = norm(y-H_l(:, 1, c_idx)*Candidates(m), 'fro');
-                x2(m, c_idx) = norm(y-H_l(:, 2, c_idx)*Candidates(m), 'fro');
+        % SM_Candidates = zeros(2, Nt, c*M^2);
+        % FroNorm = zeros(c*M^2,1);
+        index = 1;
+
+        Candidate_hi = zeros(4, M^2*c);
+        for book=1:n
+            for word=1:a
+                for x1_candidate=1:M
+                    for x2_candidate=1:M
+                        x1 = Candidates(x1_candidate);
+                        x2 = Candidates(x2_candidate);
+                        STBC_Candidate = [x1 x2; -conj(x2) conj(x1)];
+                        % SM_Candidates(:, codebook{book}{word}, book*a+word) = STBC_Candidate * exp(1j*theta(book));
+                        SM_Candidates = zeros(2, Nt);
+                        SM_Candidates(:, codebook{book}{word}) = STBC_Candidate * exp(1j*theta(book));
+                        Receive_Candidate = SM_Candidates*H;
+                        RC = reshape(Receive_Candidate, [], 1);
+                        RC(2:2:size(RC,1), 1) = conj(RC(2:2:size(RC,1), 1));
+                        
+                        FroNorm(index) = norm(y-RC,'fro')^2;
+                        Candidate_hi(:, index) = [book; word; x1_candidate; x2_candidate];
+                        index = index+1;
+                    end
+                end
             end
         end
-        
-        % 왜 이걸로 했을 때, noise=0으로 했을 때, error rate가 0으로 나왔는지 살펴볼 필요가 있음.
-        % t1 = zeros(M, c);
-        % t2 = zeros(M, c);
-        % 
-        % for c_idx = 1:c
-        %     for m=1:M
-        %         H_tmp = H_l(:, :, c_idx);
-        %         t1(m, c_idx) = norm(H_tmp(:,1)' * y - H_tmp(:, 1)' * H_tmp *[Candidates(m); 0], 'fro')^2;
-        %         t2(m, c_idx) = norm(H_tmp(:,2)' * y - H_tmp(:, 2)' * H_tmp * [0; Candidates(m)], 'fro')^2;
-        %     end
-        % end
 
-        % [minVal, minIndex]= min(t1, [], 'all');
-        % [detected_x1, ~] = ind2sub(size(t1), minIndex);
-        % 
-        % [minVal, minIndex]= min(t2, [], 'all');
-        % [detected_x2, ~] = ind2sub(size(t2), minIndex);
-
-        [val_x1, idx_x1] = min(x1);
-        [val_x2, idx_x2] = min(x2);
-
-        % m_l = min(x1)+min(x2);
-        m_l = val_x1 + val_x2;
-        [~, detected_l] = min(m_l);
-        detected_x1 = idx_x1(detected_l);
-        detected_x2 = idx_x2(detected_l);
-
-        % Due to the starting index being 1, 1 is subtracted
-        detected_l = detected_l-1;
-        detected_x1 = detected_x1-1;
-        detected_x2 = detected_x2-1;
+        [~, detected_index] = min(FroNorm, [], 'all');
+        detected_x1 = Candidate_hi(3, detected_index)-1;
+        detected_x2 = Candidate_hi(4, detected_index)-1;
+        detected_l = (Candidate_hi(1, detected_index)-1)*a + Candidate_hi(2, detected_index) - 1;
 
         DetectedSequence = [detected_x1; detected_x2];
         DetectedBinary = de2bi(DetectedSequence, log2(M), 'left-msb');
-
-        if Nt~=2
-            DetectedTransmitterBinary = de2bi(detected_l, log2(c), 'left-msb');
-        end
+        DetectedTransmitterBinary = de2bi(detected_l, log2(c), 'left-msb');
         
         TransmitError = sum((TransmitterBinary~=DetectedTransmitterBinary), 'all');
         SignalError = sum((SignalBinary~=DetectedBinary), 'all');
@@ -231,7 +217,7 @@ SBER(1,:) = SBEC(1,:)/(2*log2(M)*iteration);
 %% Plotting
 BER_Title = sprintf("BER for %d-QAM", M);
 x_axis = "SNR (dB)";
-
-legend_order = ["STBC-SM, n_T=8, 16-QAM, 6 bits/s/Hz"];
+% legend_order = ["STBC-SM, n_T=8, 16-QAM, 6 bits/s/Hz"];
+legend_order = ["foo"];
 myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
 ylim([10^(-6) 1])
