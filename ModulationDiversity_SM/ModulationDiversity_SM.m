@@ -68,7 +68,6 @@ end
 CandidateSymbol = pammod(Candidates, M) / NormalizationFactor;
 CandidateSymbol = pagetranspose(pagemtimes(R,'none', CandidateSymbol, 'transpose'));
 
-
 %% Candidate Gen, restart
 for page=1:CandidateNum
     for ii=2:TimeFrame
@@ -127,7 +126,6 @@ end
 %      end
 %  end
 %  Candidates = qammod(Candidates', M) / NormalizationFactor; % Each column is a Candidate
-Candidates = qammod(0:M-1, M) / NormalizationFactor;
 
 %% Main simulation process
 % Timer
@@ -166,95 +164,25 @@ for iTotal = 1:iteration
             RotatedSymbol_SM([ApplyingAntenna, ApplyingAntenna+Nt], TimeSlot) = RotatedSymbol([ChoiceIndex, ChoiceIndex+Np], TimeSlot);
         end
     end
+
+    % x2_r = RotatedSymbol_SM(:); % Real valued representation
+    x2_r = RotatedSymbol_SM;
     
-    x2_r = RotatedSymbol_SM(:); % Real valued representation
-
     %% Coding
-    H = (randn(Nt, Nr) + 1j * randn(Nt, Nr)) ./ sqrt(2); % Receiver x Transmitter
-    Noise = (randn(2, Nr) + 1j * randn(2, Nr)) / sqrt(2);
+    H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) / sqrt(2); % Receiver x Transmitter
+    H_r = [real(H), -imag(H);
+                  imag(H), real(H)];
 
-    H_l = zeros(Nr*2, 2, c);
-
-    %% Create H_l23
-    for book=1:n
-        assert(a==last_a, 'The current implementation needs a==last_a. Check configuration or improve code')
-        for word=1:a % This should be fixed if a~=last_a
-            H_t = H.'; % transpose so Nr x Nt
-            tmp_1 = H_t(:, codebook{book}{word}) * exp(1j*theta(book));
-            tmp_2 = conj(tmp_1(:, [2, 1]));
-            tmp_2(:, 2) = -tmp_2(:, 2);
-
-            H_l(1:2:Nr*2, :, word+(book-1)*a) = tmp_1;
-            H_l(2:2:Nr*2, :, word+(book-1)*a) = tmp_2;
-        end
-    end
-
+    Noise = randn(size(H_r, 1), 2) / sqrt(2);
 
     for SNR_idx = 1 : length(EsN0)
-        ReceivedSignal = STBC_SM * H + Noise / sqrt(EsN0(SNR_idx)); % shape of 2xNr
-        y = reshape(ReceivedSignal, [], 1);
-
-        y(2:2:size(y,1), 1) = conj(y(2:2:size(y,1), 1));
-
-        x1 = zeros(M, c);
-        x2 = zeros(M, c);
-        for c_idx = 1:c
-            for m=1:M
-                x1(m, c_idx) = norm(y-H_l(:, 1, c_idx)*Candidates(m), 'fro')^2;
-                x2(m, c_idx) = norm(y-H_l(:, 2, c_idx)*Candidates(m), 'fro')^2;
-            end
-        end
+        ReceivedSignal = H_r * x2_r + Noise / sqrt(EsN0(SNR_idx));
         
-        % 왜 이걸로 했을 때, noise=0으로 했을 때, error rate가 0으로 나왔는지 살펴볼 필요가 있음.
-        % t1 = zeros(M, c);
-        % t2 = zeros(M, c);
-        % 
-        % for c_idx = 1:c
-        %     for m=1:M
-        %         H_tmp = H_l(:, :, c_idx);
-        %         t1(m, c_idx) = norm(H_tmp(:,1)' * y - H_tmp(:, 1)' * H_tmp *[Candidates(m); 0], 'fro')^2;
-        %         t2(m, c_idx) = norm(H_tmp(:,2)' * y - H_tmp(:, 2)' * H_tmp * [0; Candidates(m)], 'fro')^2;
-        %     end
-        % end
-
-        % [minVal, minIndex]= min(t1, [], 'all');
-        % [detected_x1, ~] = ind2sub(size(t1), minIndex);
-        % 
-        % [minVal, minIndex]= min(t2, [], 'all');
-        % [detected_x2, ~] = ind2sub(size(t2), minIndex);
-
-        [val_x1, idx_x1] = min(x1);
-        [val_x2, idx_x2] = min(x2);
-
-        % m_l = min(x1)+min(x2);
-        m_l = val_x1 + val_x2;
-        [~, detected_l] = min(m_l);
-        detected_x1 = idx_x1(detected_l);
-        detected_x2 = idx_x2(detected_l);
-
-        % Due to the starting index being 1, 1 is subtracted
-        detected_l = detected_l-1;
-        detected_x1 = detected_x1-1;
-        detected_x2 = detected_x2-1;
-
-        DetectedSequence = [detected_x1; detected_x2];
-        DetectedBinary = de2bi(DetectedSequence, log2(M), 'left-msb');
-
-        if Nt~=2
-            DetectedTransmitterBinary = de2bi(detected_l, log2(c), 'left-msb');
-        end
         
+
         TransmitError = sum((TransmitterBinary~=DetectedTransmitterBinary), 'all');
         SignalError = sum((SignalBinary~=DetectedBinary), 'all');
         ErrorCount = TransmitError + SignalError;
-
-        % if DEBUG==true
-        %     c_tmp = CodewordIndex+(CodebookIndex-1)*a;
-        %     assert(isequal(H_l(:, 1, c_tmp)*Candidates(SignalSequence(1,1)+1) + H_l(:, 2, c_tmp)*Candidates(SignalSequence(2,1)+1),y), 'non match');
-        % end
-        % if ErrorCount~=0
-        %     disp("err")
-        % end
         
         BEC(1, SNR_idx) = BEC(1, SNR_idx) + ErrorCount; %bitcount(bitxor([detected_x1; detected_x2], SignalSequence)));
         TBEC(1, SNR_idx) = TBEC(1, SNR_idx) + TransmitError; %bitcount(bitxor([detected_x1; detected_x2], SignalSequence)));
