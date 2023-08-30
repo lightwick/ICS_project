@@ -85,7 +85,8 @@ codebook=map(Nt);
 c = Nt*(Nt-1)/2;
 while bitand(c, c-1) % a way to check if a number is the power of 2
     c=c-1;
-end
+end 
+% number of total codewords
 n = size(codebook,1); % number of codebooks
 a = size(codebook{1},2); % number of codewords per codebook
 
@@ -127,16 +128,28 @@ end
 %  end
 %  Candidates = qammod(Candidates', M) / NormalizationFactor; % Each column is a Candidate
 
-%% Creating 
-for i1=1:n
-    for i2=1:a
+%% Creating SM Candidates
+Candidates_SM = zeros(size(Candidates, 1), size(Candidates, 2), length(Candidates)*c^2);
+
+count = 1;
+for i1=1:n  % n is codebook
+    for i2=1:a % a is word per book
         % I want to cry.....
         % My life has no meaning....
         % Fuck Everything
         % I want to die
         % 그래 슈밤바 그냥 이번 주말에 뭘 할지나 고민하자..
         % 슈밤 뭐하지.........
-        
+
+        %% NEED TO DO FROM HERE
+        for TimeSlot=1:Np
+            AntennaChoice = codebook{CodebookIndex(TimeSlot)}{CodewordIndex(TimeSlot)};
+            for ChoiceIndex=1:Np
+                ApplyingAntenna = AntennaChoice(ChoiceIndex);
+                RotatedSymbol_SM([ApplyingAntenna, ApplyingAntenna+Nt], TimeSlot) = RotatedSymbol([ChoiceIndex, ChoiceIndex+Np], TimeSlot);
+            end
+        end
+        count = count+1; % just fucking lazy implementation
     end
 end
 
