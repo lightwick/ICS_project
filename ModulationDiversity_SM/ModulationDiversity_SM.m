@@ -76,7 +76,7 @@ for page=1:CandidateNum
 end
 %     CandidateSymbol = pagetranspose(CandidateSymbol);
 % Resize Page
-CandidateSymbol = reshape(CandidateSymbol, [], 1, CandidateNum);
+% CandidateSymbol = reshape(CandidateSymbol, [], 1, CandidateNum);
 
 %% Spatial Modulation; Setup
 map = codebook_gen();
@@ -127,6 +127,19 @@ end
 %  end
 %  Candidates = qammod(Candidates', M) / NormalizationFactor; % Each column is a Candidate
 
+%% Creating 
+for i1=1:n
+    for i2=1:a
+        % I want to cry.....
+        % My life has no meaning....
+        % Fuck Everything
+        % I want to die
+        % 그래 슈밤바 그냥 이번 주말에 뭘 할지나 고민하자..
+        % 슈밤 뭐하지.........
+        
+    end
+end
+
 %% Main simulation process
 % Timer
 FivePercent = ceil(iteration/20);
@@ -149,7 +162,7 @@ for iTotal = 1:iteration
     SymbolSequence = pammod(SignalSequence, M) / NormalizationFactor;
 
     RotatedSymbol = (R*SymbolSequence')';
-    for ii=2:n
+    for ii=2:Np
         RotatedSymbol(:, ii) = circshift(RotatedSymbol(:,ii), ii-1);
     end
     % x2_r = RotatedSymbol(:);
@@ -178,7 +191,8 @@ for iTotal = 1:iteration
     for SNR_idx = 1 : length(EsN0)
         ReceivedSignal = H_r * x2_r + Noise / sqrt(EsN0(SNR_idx));
         
-        
+        % Decoding
+
 
         TransmitError = sum((TransmitterBinary~=DetectedTransmitterBinary), 'all');
         SignalError = sum((SignalBinary~=DetectedBinary), 'all');
