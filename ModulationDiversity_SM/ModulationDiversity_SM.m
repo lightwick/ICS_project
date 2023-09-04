@@ -11,15 +11,11 @@ clc
 
 %% DEBUGGING FEATURES
 DEBUG = false;
-NOISE = true;
 
 %% User Defined Configuration
 addpath('../tools');
 M = 2;
-EsN0_dB =  0:2:22;
-if DEBUG==true
-    EsN0_dB=0;
-end
+EsN0_dB =  0:2:24;
 
 Nt = 4;
 Nr = Nt;
@@ -129,29 +125,26 @@ end
 %  Candidates = qammod(Candidates', M) / NormalizationFactor; % Each column is a Candidate
 
 %% Creating SM Candidates
-Candidates_SM = zeros(size(Candidates, 1), size(Candidates, 2), length(Candidates)*c^2);
+Candidates_SM = zeros(Nt*2, size(Candidates, 2), length(Candidates)*c^2);
+SM_Candidates = get_candidates(c, 2) + 1;
+
+TransmitCandidate = zeros(length(Candidates_SM), Np);
 
 count = 1;
-for i1=1:n  % n is codebook
-    for i2=1:a % a is word per book
-        % I want to cry.....
-        % My life has no meaning....
-        % Fuck Everything
-        % I want to die
-        % 그래 슈밤바 그냥 이번 주말에 뭘 할지나 고민하자..
-        % 슈밤 뭐하지.........
-
-        %% NEED TO DO FROM HERE
-        for TimeSlot=1:Np
-            AntennaChoice = codebook{CodebookIndex(TimeSlot)}{CodewordIndex(TimeSlot)};
+for i1 = 1 : length(SM_Candidates)
+    [BookIndex, WordIndex] = transmit2index(SM_Candidates(i1, :), a);
+    for i3=1:length(CandidateSymbol)
+        for TimeSlot = 1:Np
+            ApplyingAntenna = codebook{BookIndex(TimeSlot)}{WordIndex(TimeSlot)};
             for ChoiceIndex=1:Np
-                ApplyingAntenna = AntennaChoice(ChoiceIndex);
-                RotatedSymbol_SM([ApplyingAntenna, ApplyingAntenna+Nt], TimeSlot) = RotatedSymbol([ChoiceIndex, ChoiceIndex+Np], TimeSlot);
+                Candidates_SM([ApplyingAntenna(ChoiceIndex), ApplyingAntenna(ChoiceIndex)+Nt], TimeSlot, count) = CandidateSymbol([ChoiceIndex, ChoiceIndex+Np], TimeSlot, i3);
             end
         end
-        count = count+1; % just fucking lazy implementation
+        TransmitCandidate(count, :) = SM_Candidates(i1, :) - 1;
+        count = count + 1; % just simply lazy coding
     end
 end
+
 
 %% Main simulation process
 % Timer
@@ -201,16 +194,28 @@ for iTotal = 1:iteration
 
     Noise = randn(size(H_r, 1), 2) / sqrt(2);
 
+    % DEBUG
+    % Noise = zeros(size(Noise));
+
+    Candidate_y = pagemtimes(H_r, Candidates_SM);
+
     for SNR_idx = 1 : length(EsN0)
         ReceivedSignal = H_r * x2_r + Noise / sqrt(EsN0(SNR_idx));
         
         % Decoding
+        EuclideanDistance = pagenorm(Candidate_y - ReceivedSignal, 'fro').^2;
+        [~, idx] = min(EuclideanDistance);
+        
+        DetectedTransmitter = TransmitCandidate(idx, :);
+        DetectedSignal = Candidates(:, :, mod(idx-1, length(CandidateSymbol))+1);
+        DetectedTransmitterBinary = de2bi(DetectedTransmitter, log2(c), 'left-msb');
 
-
+         % NOTE: THIS ONLY WORKS BECAUSE THE MODULATION ORDER IN PAMMOD IS 2; MEANING ONLY 0 AND 1 IS INSIDE THE 'DetectedTransmitter' and 'DetectedSignal' variable.
         TransmitError = sum((TransmitterBinary~=DetectedTransmitterBinary), 'all');
-        SignalError = sum((SignalBinary~=DetectedBinary), 'all');
+        SignalError = sum((SignalSequence~=DetectedSignal), 'all');
         ErrorCount = TransmitError + SignalError;
         
+
         BEC(1, SNR_idx) = BEC(1, SNR_idx) + ErrorCount; %bitcount(bitxor([detected_x1; detected_x2], SignalSequence)));
         TBEC(1, SNR_idx) = TBEC(1, SNR_idx) + TransmitError; %bitcount(bitxor([detected_x1; detected_x2], SignalSequence)));
         SBEC(1, SNR_idx) = SBEC(1, SNR_idx) + SignalError; %bitcount(bitxor([detected_x1; detected_x2], SignalSequence)));
@@ -227,11 +232,15 @@ for iTotal = 1:iteration
         disp(sprintf("%d%%, estimated wait time %d minutes %d seconds", round(iTotal/iteration*100), floor(EstimatedTime/60), floor(mod(EstimatedTime, 60))))
     end
 end
-TotalTransmitBits = (2 * log2(M) + log2(c))* iteration;
+
+%% Need to fix 분모 when calculating BER
+%% 돌아와서 다시 확인
+BitsPerIteration = 2 * (log2(M)*Np*2+log2(c));
+TotalTransmitBits = BitsPerIteration * iteration;
 
 BER(1,:) = BEC(1,:)/TotalTransmitBits;
-TBER(1,:) = TBEC(1,:)/(log2(c)*iteration);
-SBER(1,:) = SBEC(1,:)/(2*log2(M)*iteration);
+% TBER(1,:) = TBEC(1,:)/(log2(c)*iteration);
+% SBER(1,:) = SBEC(1,:)/(2*log2(M)*iteration);
 
 %% Plotting
 BER_Title = sprintf("BER for %d-QAM", M);
@@ -240,3 +249,20 @@ x_axis = "SNR (dB)";
 legend_order = ["STBC-SM, n_T=8, 16-QAM, 6 bits/s/Hz"];
 myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
 ylim([10^(-6) 1])
+
+
+%% Tools
+function Candidates = get_candidates(M, Nt)
+    AllNumbers = de2bi([0:M^Nt-1], Nt*log2(M), 'left-msb');
+    Candidates = zeros(M^Nt, Nt);
+    for ii = 1 : M^Nt
+        for jj = 1 : Nt
+            Candidates(ii,jj) = bi2de(AllNumbers(ii,log2(M)*(jj-1)+1:log2(M)*jj), 'left-msb');
+        end
+    end
+end
+
+function [BookIndex, WordIndex] = transmit2index(index, wordperbook)
+    BookIndex = ceil(index/wordperbook);
+    WordIndex = mod(index-1, wordperbook)+1;
+end
