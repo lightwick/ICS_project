@@ -6,13 +6,12 @@ function [BER, SER] = simulate_mld(M, n, iteration, EbN0_dB)
     %% DEBUG
     Nt = n;
     Nr = n;
-    NormalizationFactor = sqrt(2/3*(M-1)*Nt);
     
     %% Timer
     FivePercent = ceil(iteration/20);
     
     %% START
-    Candidates = get_candidates(M, Nt) / NormalizationFactor;
+    Candidates = get_candidates(M, Nt) / sqrt(Nt);
     
     BEC = zeros(length(EsN0), 1);
     SEC = zeros(length(EsN0), 1);
@@ -25,12 +24,12 @@ function [BER, SER] = simulate_mld(M, n, iteration, EbN0_dB)
         % Bit Generation
         SignalSequence = randi([0 M-1], Nt, 1);
         SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
-        SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
+        SymbolSequence = qammod(SignalSequence, M, 'UnitAveragePower', true);
         H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) ./ sqrt(2); % Receiver x Transmitter
         NoiseSequence = (randn(Nr, 1) + 1j * randn(Nr, 1)) / sqrt(2); % Noise (n) Generation
         
         for EsN0_idx = 1:length(EsN0)
-            ReceivedSymbol = H * SymbolSequence + NoiseSequence * sqrt(1 / EsN0(EsN0_idx)); % log2(M)x1 matrix
+            ReceivedSymbol = H * SymbolSequence / sqrt(Nt) + NoiseSequence * sqrt(1 / EsN0(EsN0_idx)); % log2(M)x1 matrix
             % results in Nt x M^Nt, each column representing each candidate symbol combination
             EuclideanDistance = abs(ReceivedSymbol * ones(1,M^Nt) - H*Candidates).^2;
             [~, idx] = min(sum(EuclideanDistance, 1));
@@ -61,5 +60,5 @@ function Candidates = get_candidates(M, Nt)
             Candidates(ii,jj) = bi2de(AllNumbers(ii,log2(M)*(jj-1)+1:log2(M)*jj), 'left-msb');
         end
     end
-    Candidates = qammod(Candidates',M);
+    Candidates = qammod(Candidates',M, 'UnitAveragePower', true);
 end

@@ -4,14 +4,14 @@ function [BER, SER] = simulate_zf(M, Nr, Nt, iteration, EbN0_dB)
     EsN0_dB = pow2db(EsN0);
     
     %% DEBUG
-    NormalizationFactor = sqrt(2/3*(M-1)*Nt);
+    % NormalizationFactor = sqrt(2/3*(M-1)*Nt);
     
     %% Timer
     FivePercent = ceil(iteration/20);
     
+    SEC = zeros(length(EsN0), 1);
     %% START
     BEC = zeros(length(EsN0), 1);
-    SEC = zeros(length(EsN0), 1);
     
     for iTotal = 1:iteration
         if mod(iTotal-100, FivePercent)==0
@@ -20,7 +20,7 @@ function [BER, SER] = simulate_zf(M, Nr, Nt, iteration, EbN0_dB)
         % Bit Generation
         SignalSequence = randi([0 M-1], Nt, 1);
         SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
-        SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
+        SymbolSequence = qammod(SignalSequence, M, 'UnitAveragePower', true) / sqrt(Nt);
         H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) ./ sqrt(2); % Receiver x Transmitter
         NoiseSequence = (randn(Nr, 1) + 1j * randn(Nr, 1)) / sqrt(2); % Noise (n) Generation
         
@@ -29,7 +29,7 @@ function [BER, SER] = simulate_zf(M, Nr, Nt, iteration, EbN0_dB)
             w_zf = pinv(H);
             DetectedSymbolSequence_ZF = w_zf * ReceivedSymbol;
             
-            DetectedSequence = qamdemod(DetectedSymbolSequence_ZF*NormalizationFactor, M); % Detection
+            DetectedSequence = qamdemod(DetectedSymbolSequence_ZF*sqrt(Nt), M, 'UnitAveragePower', true); % Detection
             DetectedBinary = de2bi(DetectedSequence, log2(M), 'left-msb');
 
             BEC(EsN0_idx) = BEC(EsN0_idx) + sum(SignalBinary~=DetectedBinary, 'all');
