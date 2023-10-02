@@ -1,7 +1,7 @@
 clear
 clc
 
-addpath('tools/');
+addpath('../tools/');
 
 %% BEGIN
 iTotal = 10^4;
