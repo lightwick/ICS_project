@@ -4,20 +4,27 @@ clc
 addpath('../tools/');
 
 %% BEGIN
-iTotal = 10^4;
+iTotal = 10^5;
 
 EsN0_dB = 0:5:20;
-% EsN0_dB = 0;
 EsN0 = db2pow(EsN0_dB);
 
-Nt = 4;
-K = 2; % Number of users
-Nr = 2; % Number of Rx per user
+Nt = 16;
+K = 4; % Number of users
+Nr = 4; % Number of Rx per user
 
 ChannelSize = [Nr*K, Nt];
-CapacitySum = zeros(length(EsN0), 1);
+% CapacitySum = zeros(length(EsN0), 1);
+Capacity = zeros(length(EsN0), iTotal);
+
+% Timer
+FivePercent = ceil(iTotal/20);
 
 for iteration = 1:iTotal
+    if mod(iteration-100, FivePercent)==0
+        tic
+    end
+
     for SNR_idx = 1:length(EsN0)
         H_s = (randn(ChannelSize)+1j*randn(ChannelSize))/sqrt(2);
 %         H_s = mod(randn(ChannelSize),5);
@@ -37,6 +44,7 @@ for iteration = 1:iTotal
             V_tilde = V(:, (L_j_tilde+1:Nt));
 
             H_V_tilde(:,:,User) = H_j * V_tilde;
+            % H_j * V_tilde
             % H_j_tilde * V_tilde should equal 0 matrix
             
             %% Power Distribution
@@ -48,6 +56,10 @@ for iteration = 1:iTotal
             while true
                 r = rank(H_V_tilde(:,:,User));
                 PowerDistribution = Nr/(r-p+1)*(1+1/EsN0(SNR_idx)*sum(1./EigenValues, 'all')) - Nr/EsN0(SNR_idx)*(1./EigenValues);
+                if (r-p+1)<=0
+                    break;
+                end
+
                 if PowerDistribution(r-p+1)>=0
                     break;
                 else
@@ -55,18 +67,29 @@ for iteration = 1:iTotal
                     EigenValues(length(EigenValues))=[];
                 end
             end
-
-            Capacity = sum(log2(1+EsN0(SNR_idx)/Nr * PowerDistribution.*EigenValues), 'all');
-
-            CapacitySum(SNR_idx) = CapacitySum(SNR_idx) + Capacity;
+            
+            Capacity(SNR_idx, iteration) = Capacity(SNR_idx, iteration) + sum(log2(1+EsN0(SNR_idx)/Nt * PowerDistribution.*EigenValues), 'all');
+            
+            % CapacitySum(SNR_idx) = CapacitySum(SNR_idx) + Capacity;
         end
 %         H_s_prime = diag(H_V_tilde);
     end
+
+    if mod(iteration-100, FivePercent)==0
+        ElapsedTime = toc;
+        EstimatedTime = (iTotal-iteration)*ElapsedTime;
+        disp(sprintf("%d%%, estimated wait time %d minutes %d seconds", round(iteration/iTotal*100), floor(EstimatedTime/60), floor(mod(EstimatedTime, 60))))
+    end
 end
-ErgodicCapacity = CapacitySum / iTotal;
+% ErgodicCapacity = CapacitySum / iTotal;
+ErgodicCapacity = sum(Capacity, 2) / iTotal;
+
+% [cdf, x] = ecdf(Capacity(1, :));
+% plot(x,1-cdf);
 
 legend_ = sprintf('N_T=%d, K=%d, N_R=%d', Nt, K, Nr);
 
+figure();
 plot(EsN0_dB, ErgodicCapacity.');
 title('Sum rate performance of BD');
 xlabel('Es/N0 (dB)');
