@@ -16,7 +16,7 @@ NOISE = true;
 %% User Defined Configuration
 addpath('../tools');
 M = 16;
-EsN0_dB =  0:2:18;
+EsN0_dB =  0:2:22;
 if DEBUG==true
     EsN0_dB=0;
 end
@@ -24,7 +24,7 @@ end
 Nt = 4;
 Nr = Nt;
 
-iteration = 10^5;
+iteration = 1;
 
 
 %% Basic Configuration
@@ -150,8 +150,8 @@ for iTotal = 1:iteration
         x2 = zeros(M, c);
         for c_idx = 1:c
             for m=1:M
-                x1(m, c_idx) = norm(y-H_l(:, 1, c_idx)*Candidates(m), 'fro');
-                x2(m, c_idx) = norm(y-H_l(:, 2, c_idx)*Candidates(m), 'fro');
+                x1(m, c_idx) = norm(y-H_l(:, 1, c_idx)*Candidates(m), 'fro')^2;
+                x2(m, c_idx) = norm(y-H_l(:, 2, c_idx)*Candidates(m), 'fro')^2;
             end
         end
         
@@ -229,9 +229,10 @@ TBER(1,:) = TBEC(1,:)/(log2(c)*iteration);
 SBER(1,:) = SBEC(1,:)/(2*log2(M)*iteration);
 
 %% Plotting
-BER_Title = sprintf("BER for %d-QAM", M);
+BER_Title = "STBC-SM";
 x_axis = "SNR (dB)";
 
-legend_order = ["STBC-SM, n_T=8, 16-QAM, 6 bits/s/Hz"];
+proposed_legend = sprintf("STBC-SM, n_T=%d, %d-QAM", Nt, M);
+legend_order = [proposed_legend];
 myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
 ylim([10^(-6) 1])
