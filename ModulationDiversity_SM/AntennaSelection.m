@@ -1,9 +1,16 @@
-close all
+%close all
 clear all
 clc
 
 %% Code Description
-% Joint search on two time frames including; ((Nt)C(Np))^2 combinations on SM
+% Orthogonal Antenna Set
+
+%% TODO
+% check if input configuration is viable with the code
+% condition 1: in M=16, n_t<=8
+
+%% Current STATUS
+% When Nt=2, no BER==0; meaning there is a problem when SM is added
 
 %% DEBUGGING FEATURES
 DEBUG = false;
@@ -17,7 +24,7 @@ Nt = 4;
 Nr = Nt;
 Np = 2; % Np being the number of antennas that transmit signals; another thought;
 
-iteration = 10^5;
+iteration = 10^8;
 
 assert(Nt==4,'Only implemented Nt=4');
 
@@ -71,16 +78,13 @@ end
 % CandidateSymbol = reshape(CandidateSymbol, [], 1, CandidateNum);
 
 %% Spatial Modulation; Setup
-codebook={
-		    {[1,2], [3,4]},
-		    {[2,3], [1,4]},
-            {[1,3], [2,4]}
-	    };
+map = codebook_gen();
+codebook=map(Nt);
 
-c = 6;
-
-TransmitBitLength = log2(floor_to_power_of_two(c^2));
-
+c = Nt*(Nt-1)/2;
+while bitand(c, c-1) % a way to check if a number is the power of 2
+    c=c-1;
+end 
 % number of total codewords
 n = size(codebook,1); % number of codebooks
 a = size(codebook{1},2); % number of codewords per codebook
@@ -124,11 +128,10 @@ end
 %  Candidates = qammod(Candidates', M) / NormalizationFactor; % Each column is a Candidate
 
 %% Creating SM Candidates
-Candidates_SM = zeros(Nt*2, size(Candidates, 2), length(Candidates)*c^2);
-SM_Candidates = get_candidates(6, 2) + 1;
-SM_Candidates = SM_Candidates(1:2^TransmitBitLength, :);
-
-TransmitCandidate = zeros(length(Candidates_SM), 1);
+Candidates_SM = zeros(Nt*2, size(Candidates, 2), length(Candidates)*c);
+% SM_Candidates = get_candidates(c, 2) + 1;
+SM_Candidates = [1 2; 2 1; 3 4; 4 3];
+TransmitCandidate = zeros(length(Candidates_SM), Np);
 
 count = 1;
 for i1 = 1 : length(SM_Candidates)
@@ -140,12 +143,11 @@ for i1 = 1 : length(SM_Candidates)
                 Candidates_SM([ApplyingAntenna(ChoiceIndex), ApplyingAntenna(ChoiceIndex)+Nt], TimeSlot, count) = CandidateSymbol([ChoiceIndex, ChoiceIndex+Np], TimeSlot, i3);
             end
         end
-        TransmitCandidate(count) = i1-1;
+        TransmitCandidate(count, :) = SM_Candidates(i1, :) - 1;
         count = count + 1; % just simply lazy coding
     end
 end
 
-SMBitLength = floor_to_power_of_two(nchoosek(Nt, Np)^2);
 
 %% Main simulation process
 % Timer
@@ -157,13 +159,15 @@ for iTotal = 1:iteration
     end
     %% Bit Generation
     % Transmitter Defined Bits
-    TransmitterDecimal = randi([0 2^TransmitBitLength-1], 1, 1); % Two Time Frame
-    TransmitterBinary = de2bi(TransmitterDecimal, TransmitBitLength, 'left-msb');
+    TransmitterDecimal = randi([0 c-1], 1, 1); % Two Time Frame
+    TransmitterBinary = de2bi(TransmitterDecimal, log2(c), 'left-msb');
 
-    AntennaToUse = SM_Candidates(TransmitterDecimal+1, :);
-    CodebookIndex = floor((AntennaToUse-1) / a) + 1;
-    CodewordIndex = mod((AntennaToUse-1), a) + 1;
-    
+    AntChoice = SM_Candidates(TransmitterDecimal+1, :);
+
+    [CodebookIndex, CodewordIndex] = transmit2index(AntChoice, a);
+    % CodebookIndex = floor(TransmitterDecimal/a)+1;
+    % CodewordIndex = mod(TransmitterDecimal, a)+1;
+
     SignalSequence = randi([0 M-1], 2*Np, Np);
     % SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
     % SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
@@ -208,9 +212,9 @@ for iTotal = 1:iteration
         EuclideanDistance = pagenorm(Candidate_y - ReceivedSignal, 'fro').^2;
         [~, idx] = min(EuclideanDistance);
         
-        DetectedTransmitter = TransmitCandidate(idx, :);
+        DetectedTransmitter = TransmitCandidate(idx, 1);
         DetectedSignal = Candidates(:, :, mod(idx-1, length(CandidateSymbol))+1);
-        DetectedTransmitterBinary = de2bi(DetectedTransmitter, TransmitBitLength, 'left-msb');
+        DetectedTransmitterBinary = de2bi(DetectedTransmitter, log2(c), 'left-msb');
 
          % NOTE: THIS ONLY WORKS BECAUSE THE MODULATION ORDER IN PAMMOD IS 2; MEANING ONLY 0 AND 1 IS INSIDE THE 'DetectedTransmitter' and 'DetectedSignal' variable.
         TransmitError = sum((TransmitterBinary~=DetectedTransmitterBinary), 'all');
@@ -235,7 +239,9 @@ for iTotal = 1:iteration
     end
 end
 
-BitsPerIteration = 2 * (log2(M)*Np*2+TransmitBitLength);
+%% Need to fix 분모 when calculating BER
+%% 돌아와서 다시 확인
+BitsPerIteration = 2 * (log2(M)*Np*2) + log2(c);
 TotalTransmitBits = BitsPerIteration * iteration;
 
 BER(1,:) = BEC(1,:)/TotalTransmitBits;
@@ -243,7 +249,7 @@ BER(1,:) = BEC(1,:)/TotalTransmitBits;
 % SBER(1,:) = SBEC(1,:)/(2*log2(M)*iteration);
 
 %% Plotting
-BER_Title = sprintf("Modulation Diversity + Spatial Modulation");
+BER_Title = sprintf("BER for %d-QAM", M);
 x_axis = "SNR (dB)";
 
 legend_order = ["STBC-SM, n_T=8, 16-QAM, 6 bits/s/Hz"];
@@ -253,12 +259,13 @@ ylim([10^(-6) 1])
 
 %% Tools
 function Candidates = get_candidates(M, Nt)
+    AllNumbers = de2bi([0:M^Nt-1], Nt*log2(M), 'left-msb');
     Candidates = zeros(M^Nt, Nt);
-     for ii = 0:M^Nt-1
-         for jj = 1:Nt
-             Candidates(ii+1,jj) = mod(floor(ii/M^(Nt-jj)),M);
-         end
-     end
+    for ii = 1 : M^Nt
+        for jj = 1 : Nt
+            Candidates(ii,jj) = bi2de(AllNumbers(ii,log2(M)*(jj-1)+1:log2(M)*jj), 'left-msb');
+        end
+    end
 end
 
 function [BookIndex, WordIndex] = transmit2index(index, wordperbook)
