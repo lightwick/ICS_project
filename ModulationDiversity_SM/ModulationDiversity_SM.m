@@ -16,6 +16,7 @@ DEBUG = false;
 addpath('../tools');
 M = 2;
 EsN0_dB =  0:2:24;
+EsN0 = db2pow(EsN0_dB);
 
 Nt = 4;
 Nr = Nt;
@@ -26,14 +27,12 @@ iteration = 10^5;
 assert(Nt==4,'Only implemented Nt=4');
 
 %% Basic Configuration
-EsN0_config % configuration script in tools
-
 num = 1;
 BEC = zeros(num, length(EsN0_dB));
 TBEC = zeros(num, length(EsN0_dB));
 SBEC = zeros(num, length(EsN0_dB));
 
-NormalizationFactor = sqrt(2/3*(M-1) * 2); % Normally, this would be 'NormalizationFactor = sqrt(2/3*(M-1) * Nt);', but Spatial Modulation is added here
+NormalizationFactor = sqrt(2/3*(M^2-1) * 2); % Normally, this would be 'NormalizationFactor = sqrt(2/3*(M-1) * Nt);', but Spatial Modulation is added here
 
 
 %% Modulation Diversity; Setup
@@ -198,7 +197,8 @@ for iTotal = 1:iteration
     % Noise = zeros(size(Noise));
 
     Candidate_y = pagemtimes(H_r, Candidates_SM);
-
+    norm(x2_r, 'fro')
+    
     for SNR_idx = 1 : length(EsN0)
         ReceivedSignal = H_r * x2_r + Noise / sqrt(EsN0(SNR_idx));
         

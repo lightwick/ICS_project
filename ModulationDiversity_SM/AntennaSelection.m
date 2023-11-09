@@ -24,7 +24,7 @@ Nt = 4;
 Nr = Nt;
 Np = 2; % Np being the number of antennas that transmit signals; another thought;
 
-iteration = 10^8;
+iteration = 10^5;
 
 assert(Nt==4,'Only implemented Nt=4');
 
@@ -36,7 +36,7 @@ BEC = zeros(num, length(EsN0_dB));
 TBEC = zeros(num, length(EsN0_dB));
 SBEC = zeros(num, length(EsN0_dB));
 
-NormalizationFactor = sqrt(2/3*(M-1) * 2); % Normally, this would be 'NormalizationFactor = sqrt(2/3*(M-1) * Nt);', but Spatial Modulation is added here
+NormalizationFactor = sqrt(2/3*(M^2-1) * 2); % Normally, this would be 'NormalizationFactor = sqrt(2/3*(M^2-1) * Nt);', but Spatial Modulation is added here
 
 
 %% Modulation Diversity; Setup
