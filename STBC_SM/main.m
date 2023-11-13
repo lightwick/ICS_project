@@ -24,7 +24,7 @@ end
 Nt = 4;
 Nr = Nt;
 
-iteration = 1;
+iteration = 10^7;
 
 
 %% Basic Configuration

@@ -1,13 +1,12 @@
 function [BER, SER] = simulate_alamouti(M, Nr, iteration, EbN0_dB)
     if nargin==0
         M = 32;
-        iteration = 10^6;
+        iteration = 10^6*5;
         Nr = 4;
-        EsN0_dB = 20;
+        EsN0_dB = 0:2:22;
         EsN0 = db2pow(EsN0_dB);
         EbN0 = EsN0 / log2(M);
         EbN0_dB = pow2db(EbN0);
-        % EbN0_dB = 0:2:18;
     end
     %% BEGIN
     EbN0 = db2pow(EbN0_dB);
