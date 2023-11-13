@@ -24,7 +24,7 @@ Nt = 4;
 Nr = Nt;
 Np = 2; % Np being the number of antennas that transmit signals; another thought;
 
-iteration = 10^5;
+iteration = 10^7;
 
 assert(Nt==4,'Only implemented Nt=4');
 

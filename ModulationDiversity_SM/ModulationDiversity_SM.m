@@ -22,7 +22,7 @@ Nt = 4;
 Nr = Nt;
 Np = 2; % Np being the number of antennas that transmit signals; another thought;
 
-iteration = 10^5;
+iteration = 10^7;
 
 assert(Nt==4,'Only implemented Nt=4');
 
@@ -162,7 +162,7 @@ for iTotal = 1:iteration
     CodewordIndex = mod(TransmitterDecimal, a)+1;
 
     SignalSequence = randi([0 M-1], 2*Np, Np);
-    % SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
+    SignalBinary = de2bi(SignalSequence, log2(M), 'left-msb');
     % SymbolSequence = qammod(SignalSequence, M) / NormalizationFactor;
     SymbolSequence = pammod(SignalSequence, M) / NormalizationFactor;
 
@@ -197,7 +197,6 @@ for iTotal = 1:iteration
     % Noise = zeros(size(Noise));
 
     Candidate_y = pagemtimes(H_r, Candidates_SM);
-    norm(x2_r, 'fro')
     
     for SNR_idx = 1 : length(EsN0)
         ReceivedSignal = H_r * x2_r + Noise / sqrt(EsN0(SNR_idx));
@@ -208,11 +207,12 @@ for iTotal = 1:iteration
         
         DetectedTransmitter = TransmitCandidate(idx, :);
         DetectedSignal = Candidates(:, :, mod(idx-1, length(CandidateSymbol))+1);
+        DetectedSignal = de2bi(DetectedSignal, log2(M), 'left-msb');
         DetectedTransmitterBinary = de2bi(DetectedTransmitter, log2(c), 'left-msb');
 
          % NOTE: THIS ONLY WORKS BECAUSE THE MODULATION ORDER IN PAMMOD IS 2; MEANING ONLY 0 AND 1 IS INSIDE THE 'DetectedTransmitter' and 'DetectedSignal' variable.
         TransmitError = sum((TransmitterBinary~=DetectedTransmitterBinary), 'all');
-        SignalError = sum((SignalSequence~=DetectedSignal), 'all');
+        SignalError = sum((SignalBinary~=DetectedSignal), 'all');
         ErrorCount = TransmitError + SignalError;
         
 
