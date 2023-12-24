@@ -16,7 +16,7 @@ NOISE = true;
 %% User Defined Configuration
 addpath('../tools');
 M = 16;
-EsN0_dB =  0:2:22;
+EsN0_dB =  0:2:20;
 if DEBUG==true
     EsN0_dB=0;
 end
@@ -24,7 +24,7 @@ end
 Nt = 4;
 Nr = Nt;
 
-iteration = 10^7;
+iteration = 10^5;
 
 
 %% Basic Configuration
@@ -233,6 +233,6 @@ BER_Title = "STBC-SM";
 x_axis = "SNR (dB)";
 
 proposed_legend = sprintf("STBC-SM, n_T=%d, %d-QAM", Nt, M);
-legend_order = [proposed_legend];
+legend_order = ["STBC-SM 64-QAM(7 bpcu)", "MD-SM Orthogonal(9 bpcu)", "STBC-SM 16-QAM(5 bpcu)"];
 myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
 ylim([10^(-6) 1])

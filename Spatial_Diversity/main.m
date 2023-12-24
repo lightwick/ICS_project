@@ -6,17 +6,17 @@ dbstop if error
 addpath('../tools/')
 
 % Environment Varible
-M = 16
+M = 32;
 
 NumberIteration = 10^5;
 SimulationNum = 5;
 
 % Simulation
-EbN0_dB = 0:3:15;
-EbN0 = db2pow(EbN0_dB);
+% EbN0_dB = 0:3:15;
+% EbN0 = db2pow(EbN0_dB);
 
-EsN0 = EbN0 * log2(M);
-EsN0_dB = pow2db(EsN0);
+% EsN0 = EbN0 * log2(M);
+% EsN0_dB = pow2db(EsN0);
 
 % EsN0_dB = 0:3:15;
 % EsN0 = db2pow(EsN0_dB);
