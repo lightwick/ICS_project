@@ -17,14 +17,14 @@ DEBUG = false;
 
 %% User Defined Configuration
 addpath('../tools');
-M = 2;
+M = 4;
 EsN0_dB =  0:2:24;
 
 Nt = 4;
 Nr = Nt;
 Np = 2; % Np being the number of antennas that transmit signals; another thought;
 
-iteration = 10^7;
+iteration = 10^;
 
 assert(Nt==4,'Only implemented Nt=4');
 
@@ -217,7 +217,7 @@ for iTotal = 1:iteration
 
          % NOTE: THIS ONLY WORKS BECAUSE THE MODULATION ORDER IN PAMMOD IS 2; MEANING ONLY 0 AND 1 IS INSIDE THE 'DetectedTransmitter' and 'DetectedSignal' variable.
         TransmitError = sum((TransmitterBinary~=DetectedTransmitterBinary), 'all');
-        SignalError = sum((SignalSequence~=DetectedSignal), 'all');
+        SignalError = sum((de2bi(SignalSequence,[], log2(M))~=de2bi(DetectedSignal,[],log2(M))), 'all');
         ErrorCount = TransmitError + SignalError;
         
 
@@ -248,10 +248,11 @@ BER(1,:) = BEC(1,:)/TotalTransmitBits;
 % SBER(1,:) = SBEC(1,:)/(2*log2(M)*iteration);
 
 %% Plotting
-BER_Title = sprintf("BER for %d-QAM", M);
-x_axis = "SNR (dB)";
+% BER_Title = sprintf("BER for %d-QAM", M);
+BER_Title = "Orthogonal MD-SM: N_T=4, N_p=2"
+x_axis = "E_s/N_0 (dB)";
 
-legend_order = ["STBC-SM, n_T=8, 16-QAM, 6 bits/s/Hz"];
+legend_order = ["4-QAM Equivalent Spectral Efficiency; 5 bpcu", "16-QAM Equivalent Spectral Efficiency; 9 bpcu", "MD-SM Reduced Time Slot"];
 myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
 ylim([10^(-6) 1])
 
