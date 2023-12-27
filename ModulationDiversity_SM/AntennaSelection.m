@@ -81,7 +81,7 @@ codebook=map(Nt);
 c = Nt*(Nt-1)/2;
 while bitand(c, c-1) % a way to check if a number is the power of 2
     c=c-1;
-end 
+end
 % number of total codewords
 n = size(codebook,1); % number of codebooks
 a = size(codebook{1},2); % number of codewords per codebook
@@ -217,7 +217,7 @@ for iTotal = 1:iteration
 
          % NOTE: THIS ONLY WORKS BECAUSE THE MODULATION ORDER IN PAMMOD IS 2; MEANING ONLY 0 AND 1 IS INSIDE THE 'DetectedTransmitter' and 'DetectedSignal' variable.
         TransmitError = sum((TransmitterBinary~=DetectedTransmitterBinary), 'all');
-        SignalError = sum((de2bi(SignalSequence,[], log2(M))~=de2bi(DetectedSignal,[],log2(M))), 'all');
+        SignalError = sum((de2bi(SignalSequence, log2(M))~=de2bi(DetectedSignal,log2(M))), 'all');
         ErrorCount = TransmitError + SignalError;
         
 
