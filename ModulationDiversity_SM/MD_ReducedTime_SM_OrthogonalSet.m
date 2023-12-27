@@ -7,7 +7,8 @@
 clear all
 dbstop if error
 
-SM_bpcu = 1;
+% SM bits per iteration: bits sent per iteration
+SM_bpi = 1;
 
 TimeFrame = 2;
 
@@ -22,7 +23,6 @@ eta = 2;
 
 iteration = 1;
 
-NONOISE = false;
 %% BEGIN
 % eta/2 bits per dimension
 % to represent k bits, we need 2^k levels
@@ -57,20 +57,20 @@ end
 
 %% Candidate Generation
 CandidateNum = M^(2*Np*TimeFrame); % Number of candidates
-Candidates = zeros(2*Np, TimeFrame, CandidateNum);
-disp(sprintf("%d MD Candidates (before spatial modulation(SM) application)", size(Candidates,3)));
+Candidates_MD = zeros(2*Np, TimeFrame, CandidateNum);
+disp(sprintf("%d MD Candidates (before spatial modulation(SM) application)", size(Candidates_MD,3)));
 
 for ii = 0:CandidateNum-1
     tmp = ii;
     count = 0;
     while tmp~=0
-        Candidates(floor(count/TimeFrame)+1, mod(count, TimeFrame)+1, ii+1) = mod(tmp, M);
+        Candidates_MD(floor(count/TimeFrame)+1, mod(count, TimeFrame)+1, ii+1) = mod(tmp, M);
         tmp = floor(tmp/M);
         count = count + 1;
     end
 end
 
-CandidateSymbol = pammod(Candidates, M) / NormalizationFactor;
+CandidateSymbol = pammod(Candidates_MD, M) / NormalizationFactor;
 
 CandidateSymbol = pagetranspose(pagemtimes(R,'none', CandidateSymbol, 'transpose'));
 
@@ -103,9 +103,9 @@ assert(Nt==2*Np, "The current implementation requires Nt=2*Np");
 wordperbook = 2; % Because Nt/Np=2 for in this implementation
 
 % HARD CODED: there should be a better way to implement this.
-if SM_bpcu==1
+if SM_bpi==1
     SM_Candidates = [1 2; 2 1];
-elseif SM_bpcu==2
+elseif SM_bpi==2
     SM_Candidates = [1 2; 2 1; 3 4; 4 3];
 else
     error(['Only SM_bpcu of 1 or 2 implemented.\n' ...
@@ -114,7 +114,7 @@ end
 
 % c is the number of antenna combinations when applying SM
 c = length(SM_Candidates);
-Candidates_SM = zeros(Nt*2, size(Candidates, 2), length(Candidates)*c);
+Candidates_SM = zeros(Nt*2, size(Candidates_MD, 2), length(Candidates_MD)*c);
 
 TransmitCandidate = zeros(length(Candidates_SM), TimeFrame);
 
@@ -133,7 +133,7 @@ for i1 = 1 : length(SM_Candidates)
     end
 end
 
-%% Main simulation process - currently working on
+%% Main simulation process
 % Timer
 FivePercent = ceil(iteration/20);
 
@@ -163,7 +163,7 @@ for iTotal = 1:iteration
     end
     % x2_r = RotatedSymbol(:);
 
-    RotatedSymbol_SM = zeros(Nt*2, Np);
+    RotatedSymbol_SM = zeros(Nt*2, TimeFrame);
 
     %% Applying Spatial Modulation
     for TimeSlot=1:TimeFrame
@@ -184,7 +184,7 @@ for iTotal = 1:iteration
 
     Noise = randn(size(H_r, 1), 2) / sqrt(2);
 
-    % DEBUG
+    %% DEBUG
     % Noise = zeros(size(Noise));
 
     Candidate_y = pagemtimes(H_r, Candidates_SM);
@@ -202,13 +202,12 @@ for iTotal = 1:iteration
 
          % NOTE: THIS ONLY WORKS BECAUSE THE MODULATION ORDER IN PAMMOD IS 2; MEANING ONLY 0 AND 1 IS INSIDE THE 'DetectedTransmitter' and 'DetectedSignal' variable.
         TransmitError = sum((TransmitterBinary~=DetectedTransmitterBinary), 'all');
-        SignalError = sum((de2bi(SignalSequence,[], log2(M))~=de2bi(DetectedSignal,[],log2(M))), 'all');
+        SignalError = sum((de2bi(SignalSequence, log2(M))~=de2bi(DetectedSignal, log2(M))), 'all');
         ErrorCount = TransmitError + SignalError;
         
-
-        BEC(1, SNR_idx) = BEC(1, SNR_idx) + ErrorCount; %bitcount(bitxor([detected_x1; detected_x2], SignalSequence)));
-        TBEC(1, SNR_idx) = TBEC(1, SNR_idx) + TransmitError; %bitcount(bitxor([detected_x1; detected_x2], SignalSequence)));
-        SBEC(1, SNR_idx) = SBEC(1, SNR_idx) + SignalError; %bitcount(bitxor([detected_x1; detected_x2], SignalSequence)));
+        BEC(SNR_idx) = BEC(SNR_idx) + ErrorCount;
+        % TBEC(1, SNR_idx) = TBEC(1, SNR_idx) + TransmitError;
+        % SBEC(1, SNR_idx) = SBEC(1, SNR_idx) + SignalError;
         
         % if ErrorCount~=0
         %     disp(sum((SignalBinary~=DetectedBinary), 'all'))
@@ -224,8 +223,7 @@ for iTotal = 1:iteration
 end
 
 %% Need to fix 분모 when calculating BER
-%% 돌아와서 다시 확인
-BitsPerIteration = 2 * (log2(M)*Np*2) + log2(c);
+BitsPerIteration = TimeFrame * (log2(M)*Np*2) + SM_bpi;
 TotalTransmitBits = BitsPerIteration * iteration;
 
 BER(1,:) = BEC(1,:)/TotalTransmitBits;
