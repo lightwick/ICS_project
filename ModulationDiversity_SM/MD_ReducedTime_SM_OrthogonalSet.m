@@ -226,16 +226,16 @@ end
 BitsPerIteration = TimeFrame * (log2(M)*Np*2) + SM_bpi;
 TotalTransmitBits = BitsPerIteration * iteration;
 
-BER(1,:) = BEC(1,:)/TotalTransmitBits;
+BER = (BEC/TotalTransmitBits)';
 % TBER(1,:) = TBEC(1,:)/(log2(c)*iteration);
 % SBER(1,:) = SBEC(1,:)/(2*log2(M)*iteration);
 
 %% Plotting
 % BER_Title = sprintf("BER for %d-QAM", M);
-BER_Title = "Orthogonal MD-SM: N_T=4, N_p=2"
+BER_Title = "Orthogonal MD-SM: N_T=8, N_p=4"
 x_axis = "E_s/N_0 (dB)";
 
-legend_order = ["4-QAM Equivalent Spectral Efficiency; 5 bpcu", "16-QAM Equivalent Spectral Efficiency; 9 bpcu", "MD-SM Reduced Time Slot"];
+legend_order = [""];
 myplot(EsN0_dB, BER, BER_Title, x_axis, "BER", legend_order);
 ylim([10^(-6) 1])
 
