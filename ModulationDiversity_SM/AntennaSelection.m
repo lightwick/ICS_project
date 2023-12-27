@@ -51,20 +51,20 @@ TimeFrame = 2;
 
 % Candidate Generation
 CandidateNum = M^(2*Np^2) % * nchoosek(Nt, 2); % Number of candidates
-Candidates = zeros(2*Np, Np, CandidateNum);
-disp(sprintf("%d Candidates", size(Candidates,3)));
+Candidates_MD = zeros(2*Np, Np, CandidateNum);
+disp(sprintf("%d MD Candidates (before spatial modulation(SM) application)", size(Candidates_MD,3)));
 
 for ii = 0:CandidateNum-1
     tmp = ii;
     count = 0;
     while tmp~=0
-        Candidates(floor(count/TimeFrame)+1, mod(count, TimeFrame)+1, ii+1) = mod(tmp, M);
+        Candidates_MD(floor(count/TimeFrame)+1, mod(count, TimeFrame)+1, ii+1) = mod(tmp, M);
         tmp = floor(tmp/M);
         count = count + 1;
     end
 end
 
-CandidateSymbol = pammod(Candidates, M) / NormalizationFactor;
+CandidateSymbol = pammod(Candidates_MD, M) / NormalizationFactor;
 CandidateSymbol = pagetranspose(pagemtimes(R,'none', CandidateSymbol, 'transpose'));
 
 %% Candidate Gen, restart
@@ -73,9 +73,6 @@ for page=1:CandidateNum
         CandidateSymbol(:, ii, page) = circshift(CandidateSymbol(:,ii, page), ii-1);
     end
 end
-%     CandidateSymbol = pagetranspose(CandidateSymbol);
-% Resize Page
-% CandidateSymbol = reshape(CandidateSymbol, [], 1, CandidateNum);
 
 %% Spatial Modulation; Setup
 map = codebook_gen();
@@ -128,8 +125,10 @@ end
 %  Candidates = qammod(Candidates', M) / NormalizationFactor; % Each column is a Candidate
 
 %% Creating SM Candidates
-Candidates_SM = zeros(Nt*2, size(Candidates, 2), length(Candidates)*c);
-% SM_Candidates = get_candidates(c, 2) + 1;
+% the '*c' in 'length(Candidates_MD)*c' represents the possible SM antenna
+% selections. c is nchoosek(Nt,Np) floored to the power of 2
+Candidates_SM = zeros(Nt*2, size(Candidates_MD, 2), length(Candidates_MD)*c);
+
 SM_Candidates = [1 2; 2 1; 3 4; 4 3];
 TransmitCandidate = zeros(length(Candidates_SM), Np);
 
@@ -213,7 +212,7 @@ for iTotal = 1:iteration
         [~, idx] = min(EuclideanDistance);
         
         DetectedTransmitter = TransmitCandidate(idx, 1);
-        DetectedSignal = Candidates(:, :, mod(idx-1, length(CandidateSymbol))+1);
+        DetectedSignal = Candidates_MD(:, :, mod(idx-1, length(CandidateSymbol))+1);
         DetectedTransmitterBinary = de2bi(DetectedTransmitter, log2(c), 'left-msb');
 
          % NOTE: THIS ONLY WORKS BECAUSE THE MODULATION ORDER IN PAMMOD IS 2; MEANING ONLY 0 AND 1 IS INSIDE THE 'DetectedTransmitter' and 'DetectedSignal' variable.
