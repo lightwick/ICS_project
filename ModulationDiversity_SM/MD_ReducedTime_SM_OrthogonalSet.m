@@ -108,8 +108,6 @@ if SM_bpi==1
 elseif SM_bpi==2
     SM_Candidates = [1 2; 2 1; 3 4; 4 3];
 elseif SM_bpi==3
-    SM_Candidates = [1 2; 2 1; 3 4; 4 3; 5 6; 6 5];
-elseif SM_bpi==4
     SM_Candidates = [1 2; 2 1; 3 4; 4 3; 5 6; 6 5; 7 8; 8 7];
 else
     error(['Only SM_bpcu of 1 or 2 implemented.\n' ...
