@@ -224,6 +224,7 @@ end
 
 %% Need to fix 분모 when calculating BER
 BitsPerIteration = TimeFrame * (log2(M)*Np*2) + SM_bpi;
+disp(sprintf("This scheme has %d bpcu", BitsPerIteration/2));
 TotalTransmitBits = BitsPerIteration * iteration;
 
 BER = (BEC/TotalTransmitBits)';
@@ -232,7 +233,7 @@ BER = (BEC/TotalTransmitBits)';
 
 %% Plotting
 % BER_Title = sprintf("BER for %d-QAM", M);
-BER_Title = "Orthogonal MD-SM: N_T=8, N_p=4"
+BER_Title = "Orthogonal MD-SM: N_T=8, N_p=4";
 x_axis = "E_s/N_0 (dB)";
 
 legend_order = [""];
