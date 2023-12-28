@@ -107,6 +107,10 @@ if SM_bpi==1
     SM_Candidates = [1 2; 2 1];
 elseif SM_bpi==2
     SM_Candidates = [1 2; 2 1; 3 4; 4 3];
+elseif SM_bpi==3
+    SM_Candidates = [1 2; 2 1; 3 4; 4 3; 5 6; 6 5];
+elseif SM_bpi==4
+    SM_Candidates = [1 2; 2 1; 3 4; 4 3; 5 6; 6 5; 7 8; 8 7];
 else
     error(['Only SM_bpcu of 1 or 2 implemented.\n' ...
         'If need more, change codebook']);
@@ -246,7 +250,9 @@ ylim([10^(-6) 1])
 function codebook = getCodebook()
     codebook = {
         {[1,2,3,4], [5,6,7,8]};
-        {[1,2,7,8], [3,4,5,6]}
+        {[1,2,7,8], [3,4,5,6]};
+        {[1,3,5,7], [2,4,6,8]};
+        {[1,4,6,8], [2,3,5,7]};
         };
 end
 
