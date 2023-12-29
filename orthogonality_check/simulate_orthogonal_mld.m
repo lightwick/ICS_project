@@ -83,7 +83,8 @@ function BER = simulate_orthogonal_mld(M , iteration, EbN0_dB)
     end
     
     % SER = SEC/(iteration*Nt);
-    BER = BEC/(iteration*Nt*log2(M));
+    BitsPerIteration = Np*log2(M)*TimeFrame;
+    BER = BEC/(iteration*BitsPerIteration);
 end
 
 function Candidates = get_candidates(M, Nt)
