@@ -9,13 +9,13 @@ function BER = simulate_modulation_diversity_improved(eta, Nt, Nr, iteration, Eb
         Nr = 4;
         eta = 2;
         EbN0_dB = 0;
-        iteration = 1;
+        iteration = 10^3;
     end
 %     n = 2;
 %     eta = 2;
 %     EbN0_dB = 0:5;
 %     iteration = 10^4;
-    NONOISE = false;
+    NONOISE = true;
     %% BEGIN
     % eta/2 bits per dimension
     % to represent k bits, we need 2^k levels
@@ -29,25 +29,25 @@ function BER = simulate_modulation_diversity_improved(eta, Nt, Nr, iteration, Eb
 %     NormalizationFactor = sqrt(2/3*(M-1) * n);
     NormalizationFactor = sqrt(2/3*(M^2-1)*Nt);
     
-    if n==2
-%         TODO: doesn't matter? or does matter?
-        lambda = (1+sqrt(5))/2;
-%         lambda = (1-sqrt(5))/2;
-        a = 1/sqrt(1+lambda^2);
-        b = lambda*a;
-        R = [a -b;
-               b  a];
-    elseif n==3
-        phi = 2*cos(6/7*pi);
-        alpha = (1+phi)/(1+phi+phi^2);
-        beta = phi*alpha;
-        gamma = -phi/(1+phi)*alpha;
-        
-        R = [alpha, beta, -gamma;
-               beta, gamma, -alpha;
-               gamma, alpha, -beta]
-    else
-        error('n has to be 2 or 3');
+    switch Nt
+        case 2
+            lambda = (1+sqrt(5))/2; % lambda = (1-sqrt(5))/2;
+
+            a = 1/sqrt(1+lambda^2);
+            b = lambda*a;
+            R = [a -b;
+                b  a];
+        case 3
+            phi = 2*cos(6/7*pi);
+            alpha = (1+phi)/(1+phi+phi^2);
+            beta = phi*alpha;
+            gamma = -phi/(1+phi)*alpha;
+
+            R = [alpha, beta, -gamma;
+                beta, gamma, -alpha;
+                gamma, alpha, -beta];
+        otherwise
+            error('n has to be 2 or 3');
     end
 
     %% Code Word generation
@@ -74,8 +74,8 @@ function BER = simulate_modulation_diversity_improved(eta, Nt, Nr, iteration, Eb
     CandidateSymbol = pagetranspose(pagemtimes(R,'none', CandidateSymbol, 'transpose'));
     
     %% Candidate Gen, restart
-    for page=1:M^(2*n^2)
-        for ii=2:n
+    for page=1:M^(2*Nt^2)
+        for ii=2:Nt
             CandidateSymbol(:, ii, page) = circshift(CandidateSymbol(:,ii, page), ii-1);
         end
     end
@@ -102,23 +102,22 @@ function BER = simulate_modulation_diversity_improved(eta, Nt, Nr, iteration, Eb
         
         SymbolSequence = pammod(SignalSequence, M) / NormalizationFactor;
         RotatedSymbol = (R*SymbolSequence')';
-        for ii=2:n
+        for ii=2:Nt
             RotatedSymbol(:, ii) = circshift(RotatedSymbol(:,ii), ii-1);
         end
         x2_r = RotatedSymbol(:);
         
-        H = (randn(n, n) + 1j * randn(n, n)) ./ sqrt(2); % slow fading
+        H = (randn(Nr, Nt) + 1j * randn(Nr, Nt)) ./ sqrt(2); % slow fading
         H_r = [real(H), -imag(H);
                   imag(H), real(H)];
               
-        TransmittedSignal = kron(eye(n), H_r) * x2_r;
+        TransmittedSignal = kron(eye(Nt), H_r) * x2_r;
         
-        CandidateHX = pagemtimes(kron(eye(n), H_r), CandidateSymbol);
+        CandidateHX = pagemtimes(kron(eye(Nt), H_r), CandidateSymbol);
 
+        Noise = randn(2*Nr*Nt, 1) / sqrt(2); % Nt is multiplied because Nt dictates the number of time slots
         if NONOISE
-            Noise = zeros(2*Nt^2,1);
-        else
-            Noise = randn(2*Nt^2, 1) / sqrt(2);
+            Noise = zeros(size(Noise));
         end
         
         for idx = 1:length(EsN0)
@@ -139,5 +138,6 @@ function BER = simulate_modulation_diversity_improved(eta, Nt, Nr, iteration, Eb
             disp(sprintf("%d%%, estimated wait time %d minutes %d seconds", round(iTotal/iteration*100), floor(EstimatedTime/60), floor(mod(EstimatedTime, 60))))
         end
     end
-    BER = BEC / (iteration* 2*n^2 * log2(M)); % 4 symols per iteration; log2(M) bit per signal
+    BitsPerIteration = 2 * Nt^2 * log2(M);
+    BER = BEC / (iteration * BitsPerIteration); % 4 symols per iteration; log2(M) bit per signal
 end
