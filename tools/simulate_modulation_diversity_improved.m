@@ -15,7 +15,7 @@ function BER = simulate_modulation_diversity_improved(eta, Nt, Nr, iteration, Eb
 %     eta = 2;
 %     EbN0_dB = 0:5;
 %     iteration = 10^4;
-    NONOISE = true;
+    NONOISE = false;
     %% BEGIN
     % eta/2 bits per dimension
     % to represent k bits, we need 2^k levels
