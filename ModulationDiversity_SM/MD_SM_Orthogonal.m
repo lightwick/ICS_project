@@ -3,7 +3,7 @@ clear all
 clc
 
 %% Code Description
-% Orthogonal Antenna Set
+% Regular Modulation Diversity + Orthogonal SM
 
 %% TODO
 % check if input configuration is viable with the code
