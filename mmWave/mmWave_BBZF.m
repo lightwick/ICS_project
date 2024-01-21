@@ -11,7 +11,7 @@ d = lambda / 2; % Inter-antenna spacing
 k = 2 * pi / lambda; % Array response coefficient
 
 %% Configuration
-EsN0_dB = -40:4:0;
+EsN0_dB = -20:5:20;
 EsN0 = db2pow(EsN0_dB);
 
 Nu = 4; % User
@@ -27,7 +27,7 @@ Rx_W = sqrt(Nus);
 Rx_H = sqrt(Nus);
 
 Rx_RF = 1;
-Tx_RF = 1;
+Tx_RF_USER = 4;
 
 
 DataRate = zeros(length(EsN0), 3); % ZFBF, R-ZF BF, Beamsteering
@@ -47,41 +47,79 @@ for iteration = 1:iTotal
     end
     % alpha = ray x user
     [~, desc_idx] = sort(abs(alpha), 1, 'descend');
-    desc_idx = desc_idx(1:Tx_RF, :); % keeping only as much values as RF-chain numbers
+    desc_idx = desc_idx(1:Tx_RF_USER, :); % keeping only as much values as RF-chain numbers
     for i1=1:Nts % NOT SURE IF N_u or N_ts
-            F_RF(:, Tx_RF * (i1-1) + 1 : Tx_RF * i1) = UPA_Tx(:, RayNumber*(i1-1)+desc_idx(:, i1));
+            F_RF(:, Tx_RF_USER * (i1-1) + 1 : Tx_RF_USER * i1) = UPA_Tx(:, RayNumber*(i1-1)+desc_idx(:, i1));
     end
     H_eff = H * F_RF;
     % F_bb_zf = H' * inv(H*H');
-    F_bb_zf = inv(H_eff' * H_eff) * H_eff';
-
+    F_BB_ZF = inv(H_eff' * H_eff) * H_eff';
+    
     %% Normalization
-    % for i2 = 1 : Nu
-    %     F_zf( : , i2) = F_zf( : , i2) / norm(F_zf( : , i2), 'fro');
-    % end
+    F = F_RF * F_BB_ZF;
+    F = F/norm(F, 'fro')*Nts;
+    
+    % tmp_BB_ZF_Gain = H*F*F'*H';
+    % BB_ZF_Gain = diag(tmp_BB_ZF_Gain);
+
+
+    tmp_gain_BB_ZF = H * F * F' * H';
+    BB_ZF_HF_Gain = diag(tmp_gain_BB_ZF);
+    BB_ZF_Gain = abs(diag(H*F)).^2;
+    
+    %% Full dimension ZF
+    F_zf = H' * inv(H*H');
+    
+    for i2 = 1 : Nu;
+        F_zf( : , i2) = F_zf( : , i2) / norm(F_zf( : , i2), 'fro');
+    end
     
     H_eff_zf = H * F_zf;
     tmp_gain_zf = H_eff_zf * H_eff_zf';
     ZF_Gain = diag(tmp_gain_zf);
 
-    %% Channel Realization
-    for SNR_idx = 1:length(EsN0)
-        F_mmse = H' * inv(H * H' + Nts / EsN0(SNR_idx) * eye(Nts));
-        for i2=1:Nu
-            F_mmse( : , i2) = F_mmse( : , i2) / norm(F_mmse( : , i2), 'fro');
-        end
-        H_eff_mmse = H * F_mmse;
-        tmp_gain_mmse = H_eff_mmse * H_eff_mmse';
-        MMSE_Gain = diag(tmp_gain_mmse);
+    %% Beam Steering
+    F_BS = F_RF;
+    for i1=1:Nts % NOT SURE IF N_u or N_ts
+            % F_RF(:, Tx_RF_USER * (i1-1) + 1 : Tx_RF_USER * i1) = UPA_Tx(:, RayNumber*(i1-1)+desc_idx(:, i1));
+            % HONESTLY NOT SURE IF IT'S VALID
+            W_BS(:, Tx_RF_USER * (i1-1) + 1 : Tx_RF_USER * i1) = UPA_Rx(:, RayNumber*(i1-1)+desc_idx(:, i1));
+    end
+    % NOTE: NOT INTUITIVE BUT IT WORKS
+    H_eff_BS = H * F_BS;
+    tmp_gain_BS = H_eff_BS * H_eff_BS';
+    BS_HF_Gain = diag(tmp_gain_BS);
+    BS_Gain = abs(diag(H_eff_BS)).^2;
 
+    %% simulation
+    for SNR_idx = 1:length(EsN0)
         for user=1:Nu
-            tmp = eye(Nus) + ZF_Gain(user) / (sum(tmp_gain_zf(user, :), 'all') - ZF_Gain(user)+Nts/EsN0(SNR_idx)*eye(Nus));
+            %% BB-ZF
+            % tmp = eye(Nus) + ZF_Gain(user) / (sum(tmp_gain_zf(user, :), 'all') - ZF_Gain(user)+Nts/EsN0(SNR_idx)*eye(Nus));
+            % tmp = eye(Nus) + BB_ZF_Gain(user) / (sum(tmp_BB_ZF_Gain(user, :), 'all') - BB_ZF_Gain(user) + Nts/EsN0(SNR_idx)*eye(Nus));
+            % tmp = eye(Nus) + BB_ZF_Gain(user) / (BB_ZF_HF_Gain(user) - BB_ZF_Gain(user)+Nts/EsN0(SNR_idx)*eye(Nus));
+            gain = H(user, :) * F(:, user) * F(:, user)' * H(user, :)';
+            interference = 0;
+            for i1=1:Nu
+                if i1==user
+                    continue
+                end
+                interference = interference + H(user, :) * F(:, i1) * F(:, i1)' * H(user, :)';
+            end
+            tmp = eye(Nus) + gain / (interference+Nts/EsN0(SNR_idx)*eye(Nus));
             rate = log2(det(tmp));
             DataRate(SNR_idx, 1) = DataRate(SNR_idx, 1) + rate;
 
-            tmp = eye(Nus) + MMSE_Gain(user) / (sum(tmp_gain_mmse(user, :), 'all') - MMSE_Gain(user)+Nts/EsN0(SNR_idx)*eye(Nus));
+            %% ZF
+            tmp = eye(Nus) + ZF_Gain(user) / (sum(tmp_gain_zf(user, :), 'all') - ZF_Gain(user)+Nts/EsN0(SNR_idx)*eye(Nus));
             rate = log2(det(tmp));
             DataRate(SNR_idx, 2) = DataRate(SNR_idx, 2) + rate;
+
+            %% BEAM STEERING
+            % 현재 UPA_Rx가 모두 1로 나오는 문제 있음. 그거 수정하면 아래 코드도 수정 필요
+            tmp = eye(Nus) + BS_Gain(user) / (BS_HF_Gain(user) - BS_Gain(user)+Nts/EsN0(SNR_idx)*eye(Nus));
+            rate = log2(det(tmp));
+            DataRate(SNR_idx, 3) = DataRate(SNR_idx, 3) + rate;
         end
     end
 
@@ -96,62 +134,6 @@ DataRate = DataRate / iTotal;
 figure;
 plot(EsN0_dB, DataRate(:,1), '.--', 'MarkerSize', 15);
 hold on
+grid on
 plot(EsN0_dB, DataRate(:,2), '.--', 'MarkerSize', 15);
-
-
-function [H, Tx_UPA, Rx_UPA, alpha] = mmWave_channel_realization_MU(Ray_number, d, k, Nt, Nus, Tx_W, Tx_H, Rx_W, Rx_H, Nu)
-    %% mmWave Channel Realization
-    %% Initialization
-    Tx_azimuth_angle = zeros(1, Ray_number);
-    Tx_elevation_angle = zeros(1, Ray_number);
-    Rx_azimuth_angle = zeros(1, Ray_number);
-    Rx_elevation_angle = zeros(1, Ray_number);
-    Tx_UPA = zeros(Tx_W * Tx_H, Ray_number);
-    Rx_UPA = zeros(Rx_W * Rx_H, Ray_number, Nu);
-    %% L-ray channel realization
-    for ray = 1 : Ray_number;
-        %% AoA & AoD generation
-        Tx_azimuth_angle(ray) = 2 * pi * rand;
-        Tx_elevation_angle(ray) = 2 * pi * rand;
-        Rx_azimuth_angle(ray) = 2 * pi * rand;
-        Rx_elevation_angle(ray) = 2 * pi * rand;
-    %     %% Test
-    %     for i1 = 0 : Tx_W - 1
-    %         temp(1, i1 * Tx_W + 1 : (i1 + 1) * Tx_W) = (i1 * 1i) + (0 : 1 : Tx_H - 1);
-    %     end
-        %% Transmitter UPA generation
-        for i1 = 0 : Tx_W - 1
-            Tx_UPA(i1 * Tx_W + 1 : (i1 + 1) * Tx_W, ray) = exp(1i * k * d * (i1 * sin(Tx_azimuth_angle(ray)) * sin(Tx_elevation_angle(ray))...
-                 + (0 : 1 : Tx_H - 1) * cos(Tx_elevation_angle(ray))));
-        end
-    %     %% Test (using Kronecker product)
-    %     temp_1 = exp(1i * k * d * cos(Tx_elevation_angle(ray)) * (0 : 1 : Tx_H - 1));
-    %     temp_2 = exp(1i * k * d * sin(Tx_azimuth_angle(ray)) * sin(Tx_elevation_angle(ray)) * (0 : 1 : Tx_W - 1));
-    %     Tx_UPA_temp( : , ray) = kron(temp_1, temp_2);
-        %% Receiver UPA generation
-        for user=1:Nu
-            for i1 = 0 : Rx_W - 1
-                Rx_UPA(i1 * Rx_W + 1 : (i1 + 1) * Rx_W, ray, user) = exp(1i * k * d * (i1 * sin(Rx_azimuth_angle(ray)) * sin(Rx_elevation_angle(ray))...
-                     + (0 : 1 : Rx_H - 1) * cos(Rx_elevation_angle(ray))));
-            end
-        end
-    end % ray iteration
-    % Tx_UPA_temp = 1 / sqrt(Nt) * Tx_UPA;
-    Tx_UPA = 1 / sqrt(Nt) * Tx_UPA; % At matrix
-    Rx_UPA = 1 / sqrt(Nus) * Rx_UPA; % Ar matrix
-    
-    %% Summing each propagation paths
-    H = zeros(Nus * Nu, Nt); % Initialization of channel
-    alpha = zeros(Ray_number, Nu); % initialization of complex gains    
-    for user=1:Nu
-        for ray = 1 : Ray_number;
-            alpha(ray, user) = (randn + randn * 1i) / sqrt(2);
-            temp_H = sqrt(Nt * Nus / Ray_number) * alpha(ray, user) * Rx_UPA( : , ray, user) * Tx_UPA( : , ray)';
-            H([Nus*(user-1)+1:Nus*user], :) = H([Nus*(user-1)+1:Nus*user], :) + temp_H;
-        end
-    end
-    % alpha = alpha.';
-    %% Test (using matrix product)
-    % D = sqrt(Nt * Nr / Ray_number) * diag(alpha);
-    % H2 = Rx_UPA * D * Tx_UPA';
-end
+plot(EsN0_dB, DataRate(:,3), '.--', 'MarkerSize', 15);
