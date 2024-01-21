@@ -53,15 +53,15 @@ for iteration = 1:iTotal
     end
     H_eff = H * F_RF;
     % F_bb_zf = H' * inv(H*H');
-    F_BB_ZF = inv(H_eff' * H_eff) * H_eff';
+    % F_BB_ZF = inv(H_eff' * H_eff) * H_eff';
+    F_BB_ZF = H_eff' * inv(H_eff * H_eff');
     
     %% Normalization
     F = F_RF * F_BB_ZF;
-    F = F/norm(F, 'fro')*Nts;
+    F = F/norm(F, 'fro')*sqrt(Nts);
     
     % tmp_BB_ZF_Gain = H*F*F'*H';
     % BB_ZF_Gain = diag(tmp_BB_ZF_Gain);
-
 
     tmp_gain_BB_ZF = H * F * F' * H';
     BB_ZF_HF_Gain = diag(tmp_gain_BB_ZF);
