@@ -21,7 +21,7 @@ Np = 2;
 Nr = 4;
 M = 4;
 
-iteration = 10^4;
+iteration = 10^5;
 
 num = 1;
 BEC = zeros(num, length(EsN0_dB));
@@ -75,31 +75,38 @@ for iTotal = 1:iteration
 
     for SNR_idx = 1 : length(EsN0)
         y = H * x_eff + n / sqrt(EsN0(SNR_idx));
-        foo = inv(H' * H) * H';
-        [val, idx] = sort(abs(foo*y), 'descend');
+        % foo = inv(H' * H) * H';
+        % [val, idx] = sort(abs(foo*y), 'descend');
 
-        % for i1=1:length(codebook)
-        %     T_k(:,:,i1) = H(:, codebook(i1, :));
-        % end
-        % T_k_hermitian = pagectranspose(T_k);
-        % foo = pageinv(pagemtimes(T_k_hermitian, T_k));
-        % foo = pagemtimes(foo, T_k_hermitian);        
-        % foo = pagemtimes(foo, y);
-        
-        % [val, idx] = sort(abs(y-foo), 'descend');
-        idx = sort(idx(1:Np));
-
-        for i1 = 1:c
-            if codebook(i1,:)==idx.'
-                DetectedWord_idx = i1;
-                break
-            end
+        for i1=1:length(codebook)
+            T_k(:,:,i1) = H(:, codebook(i1, :));
         end
+        T_k_hermitian = pagectranspose(T_k);
+        Inverse = pageinv(pagemtimes(T_k_hermitian, T_k));
+        
+        First = pagemtimes(T_k, Inverse);
+        Second = pagemtimes(First, T_k_hermitian);
+        Final = pagemtimes(Second, y);
+        
+        EndNorm = pagenorm(Final, 'fro');
+
+        % [val, idx] = sort(EndNorm(:), 'descend');
+        % idx = sort(idx(1:Np));
+        [val, idx] = max(EndNorm(:));
+        DetectedWord_idx = idx;
+
+        % for i1 = 1:c
+        %     if codebook(i1,:)==idx.'
+        %         DetectedWord_idx = i1;
+        %         break
+        %     end
+        % end
 
         Candidate_y = zeros(Nt, length(ModulatedCandidates));
         for i1=1:length(ModulatedCandidates)
-            Candidate_y(idx, i1) = ModulatedCandidates(i1,:);
+            Candidate_y(codebook(idx,:), i1) = ModulatedCandidates(i1,:);
         end
+
         Candidate_y = H * Candidate_y * theta(DetectedWord_idx);
         diff = sum(abs(y-Candidate_y).^2, 1);
         [val, idx] = min(diff);
